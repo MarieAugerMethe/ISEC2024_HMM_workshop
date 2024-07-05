@@ -69,10 +69,10 @@ library(geosphere)  # Needed to calculate step lengths from lat/lon locations - 
 
 While the `raster` package is being phased out in favour of the new `terra` package, `momentuHMM` still relies on the `raster` package to extract covariates. Therefore, for this tutorial we will still use `raster`, but do start working with `terra` in your work where possible.  
 
-Make sure to set working directory to "ISEC2024_HMM_workshop/1_Morning_Tutorial" of the HMM workshop folder:
+Make sure to set working directory to "ISEC2024_HMM_workshop" of the HMM workshop folder:
 
 ```{r, eval=FALSE, warning=FALSE, attr.source = ".numberLines"}
-setwd("Narwhal")
+setwd("1_Morning_Tutorial/Tutorial_files")
 ```
 
 We will need the functions in the following file `utility_functions.R`

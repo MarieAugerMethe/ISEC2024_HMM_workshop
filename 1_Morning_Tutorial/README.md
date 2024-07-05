@@ -1,12 +1,14 @@
-# CANSSI OTN Hidden Markov Model: *Morning Tutorial*
+# ISEC Hidden Markov Model: *Morning Tutorial*
 
-Hi, welcome to the morning tutorial. It will be completed together, and can be found in the [Activity](./Activity/Tutorial_Narwhal_morning_activity.Rmd) folder and will begin with a 30-minute introduction that will provide an overview of the tutorial objectives, and will go through the statistical background required. The tutorial has some guided activities.
+Welcome to the morning tutorial! 
+
+We will begin with a 30-minute introduction that will provide an overview of what are hidden Markov models (HMMs) and then we will complete together the activity found in the [Tutorial_files](./Tutorial_files/Tutorial_Narwhal_morning.Rmd) folder. The tutorial has some guided activities.
 
 <img src="PaulNicklen.jpeg" width="500"> 
 Photo Credits: Paul Nicklen 
 
 
-We will look at a narwhal dataset provided by Dr. Marianne Marcoux. The narwhals have been tagged in Tremblay Sound, Nunavut, Canada. We will look at their movement over a two-week duration. Let's get started.
+We will look at a narwhal dataset provided by Dr. Marianne Marcoux. The narwhals have been tagged in Tremblay Sound, Nunavut, Canada. We will look at their movement over a two-week duration.
 
 Below is a reminder of the structure of the tutorial and how to get it set up. 
 ## Workshop learning objectives
