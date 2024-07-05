@@ -9,7 +9,7 @@ The goal of the workshop is to illustrate how hidden Markov models (HMMs) can be
 ## Tentitative schedule
 
 10:00 Introduction to HMM (presentation)
-10:45 Start of animal movement tutorial
+10:30 Start of animal movement tutorial
 11:30 Break
 12:00 End of animal movement tutorial
 13:00 Lunch
