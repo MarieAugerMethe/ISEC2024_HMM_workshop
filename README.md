@@ -8,16 +8,16 @@ The goal of the workshop is to illustrate how hidden Markov models (HMMs) can be
 
 ## Tentitative schedule
 
- 9:00 Introduction to HMM (presentation)
- 9:45 Start of animal movement tutorial
-10:30 Break
-11:00 End of animal movement tutorial
-12:00 Lunch
-13:00 Research talk: Brett McClintock - HMMs in ecology
-14:00 Start of accelerometer tutorial
-14:30 Break
-15:00 End of accelerometer tutorial
-16:00 Wrap up
+10:00 Introduction to HMM (presentation)
+10:45 Start of animal movement tutorial
+11:30 Break
+12:00 End of animal movement tutorial
+13:00 Lunch
+14:00 Research talk: Brett McClintock - HMMs in ecology
+15:00 Start of accelerometer tutorial
+15:30 Break
+16:00 End of accelerometer tutorial
+16:45 Wrap up
 
 ## Prerequisite experience
 
