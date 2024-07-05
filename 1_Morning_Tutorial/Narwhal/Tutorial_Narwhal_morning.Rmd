@@ -526,6 +526,32 @@ AIC(mod_obs)  # time of day effect on observation parameters
 
 This indicates the the model with a time-varying mean step length is the best fitting model. 
 
+# Exercise
+
+Here we will use polar bear GPS data of one adult female found here
+
+Derocher, Andrew, 2021, "Replication Data for: Togunov RR, Derocher AE, Lunn NJ, Auger-Méthé M. 2021. Characterising menotatic behaviours in movement data using hidden Markov models. Methods in Ecology and Evolution.", https://doi.org/10.7939/DVN/QYMAYV,
+
+Which is the dataset used in 
+
+The description is: Togunov RR, Derocher AE, Lunn NJ, Auger-Méthé M. 2021. Characterising menotatic behaviours in movement data using hidden Markov models. Methods in Ecology and Evolution. 
+
+time: Date of GPS location obtained by telemetry collar. YYYY-MM-DD hh:mm 
+x: X coordinate Degrees longitude
+y: Y coordinate Degrees latitude 
+u10: ‘u’ (west to east) component of wind at 10m elevation2 m/s 
+v10: ‘v’ (south to north) component of wind at 10m elevation2 m/s 
+
+The locations are unprojected in WGS84 (EPSG:4326), while the wind estimates are bilinearly interpolated from ECMWF’s ERA5 reanalysis: Hersbach, H., Bell, B., Berrisford, P., Hirahara, S., Hora_nyi, A., Mun~oz-Sabater, J., Nicolas, J., Peubey, C., Radu, R., Schepers, D., Simmons, A., Soci, C., Abdalla, S., Abellan, X., Balsamo, G., Bechtold, P., Biavati, G., Bidlot, J., Bonavita, M., Chiara, G. & et al. (2020). The ERA5 global reanalysis. Quarterly Journal of the Royal Meteorological Society, 146(730), 1999-2049. http://dx.doi.org/10.1002/qj.3803
+
+```{r import_pb_data, attr.source = ".numberLines"}
+pb <- read.csv("data/WH_X33406_location_data-1.csv")
+```
+
+```{r}
+head(pb)
+```
+
 # Bonus
 
 ## Handling irregular data
