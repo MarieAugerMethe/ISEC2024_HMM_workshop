@@ -66,6 +66,7 @@ library(ggspatial)  # plot the data
 library(lubridate)  # transform numeric vectors to POSIXct objects.
 library(sf)         # spatial data processing
 library(kableExtra) # produce visually appealing tables
+library(geosphere)  # Needed to calculate step lengths from lat/lon locations - just need it installed
 ```
 
 While the `raster` package is being phased out in favour of the new `terra` package, `momentuHMM` still relies on the `raster` package to extract covariates. Therefore, for this tutorial we will still use `raster`, but do start working with `terra` in your work where possible.  
