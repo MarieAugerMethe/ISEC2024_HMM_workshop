@@ -131,18 +131,27 @@ basemap(limits = c(bbox), bathymetry = TRUE) +
 CHANGE TO UTM??
 
 ## Covariates and data streams
-Next, we need to derive our data streams (step lengths and turning angles) and covariates. We don't have any spatial covariates, but we could interpolate them now if we did. Rather, we will be using a time of day covariate later in our tutorial, so we will derive this covariate now.
+
+ADD SPATIAL COVARIATE BATHY??
+
+Next, we need to derive our data streams (step lengths and turning angles) and covariates. 
+We don't have any spatial covariates, but we could interpolate them now if we did.
+Rather, we will be using a time of day covariate later in our tutorial, so we will derive this covariate now.
 
 ```{r prep, attr.source = ".numberLines"}
 # calculate time of day variable (for later use)
-data$tod <- hour(data$time) + minute(data$time) / 60
+tracks_gps$tod <- hour(tracks_gps$time) + minute(data$time) / 60
 ```
 
-Now, we will get our observation variables using the `prepData` function. The default is UTM, so we actually don't need to specify it, but we do so for clarity in this example. The argument `covNames` will distinguish our model covariates from data streams. If there are missing covariate values, the default is to fill the missing value with the nearest value. This can be reasonable for spatial covariates, but wouldn't be sensible for a covariate such as time of day. We have no missing covariate values, so it's not a concern, but this is something to be aware of when using `prepData`. 
+Now, we will get our observation variables using the `prepData` function. 
+
+The default is UTM, but here we use Lat Lon, so we specify "LL" in `type`. 
+
+The argument `covNames` will distinguish our model covariates from data streams. If there are missing covariate values, the default is to fill the missing value with the nearest value. This can be reasonable for spatial covariates, but wouldn't be sensible for a covariate such as time of day. We have no missing covariate values, so it's not a concern, but this is something to be aware of when using `prepData`. 
 
 ```{r prep2, attr.source = ".numberLines"}
 # calculate step length and turning angles
-data <- prepData(data, type = "UTM", covNames = "tod")
+data <- prepData(tracks_gps, type = "LL", covNames = "tod")
 
 # take a peak at the data
 head(data)
