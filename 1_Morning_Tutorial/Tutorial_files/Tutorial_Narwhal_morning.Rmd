@@ -82,23 +82,24 @@ source("utility_functions.R")
 
 # Import data with description and processing
 
-HMMs assume that locations are taken at regular time steps and that there is negligible position
-error. For example, HMMs are adequate to use on GPS tags that take
+HMMs assume that locations are taken at regular time steps and that there is negligible position error. 
+For example, HMMs are adequate to use on GPS tags that take
 locations at a set temporal frequency (e.g., every $2$ hrs). Without
 reprocessing, HMMs are not suitable for irregular times series
 of locations or locations with large measurement error (e.g., you would
 need to preprocess Argos data before applying HMMs).
 
-
-Unfortunately, movement of aquatic species is rarely taken at regular time intervals and without
-measurement error. 
-The data set we will work on, is the movement track of three narwhals tagged with a Fastlock GPS tag for two weeks, provided by Dr. Marianne Marcoux. 
+The dataset we will work with includes the movement tracks of three narwhals tagged with Fastlock GPS tags. 
+The dataset was provided by Dr. Marianne Marcoux (Fisheries and Oceans, Canada). 
 For simplicity, we only examine the GPS data from two weeks in August 2017. 
 
-We have already regularized the tracks , to see more information on why these choices were made see section XX below.
+As is the case for the data of many aquatic species,
+the raw narwhal Fastlock GPS data is at collected irregular time intervals (the time of locations is dictated partly with when they surface). 
+To simplify the tutorial, we have already regularized the tracks. 
+Specifically, we have split tracks with data gaps of more 1 hr into a subset of tracks, and have interpolating the locations at a 10 min interval using a continuous-time correlated random walk using the `momentuHMM` `crawlWrap` function. See section \@ref(sec-narwhal-reg) below.
 
 
-First, let's import the narwhal regularized movement data and convert the time column to an appropriate date format.
+Let's import the regularized narwhal movement data and convert the time column to an appropriate date format.
 
 ```{r import_tracks, warning=FALSE, attr.source = ".numberLines"}
 tracks_gps <- read.csv("data/tracks_regular.csv") %>%
@@ -111,14 +112,14 @@ We can have a first look at the data, to get more familiar with it.
 head(tracks_gps)
 ```
 
-The data is projected in UTM  zone XX.
+The coordinates are in Lat/Lon (x = lon, y = lat).
 
-Now we will plot the tracks with the package `ggOceanMaps` that will show the tracks on the map of the Earth, with limits set in Longitude and Latitude of our data (`bbox`below). This package is convenient since it deals with Longitude and Latitude, and there is no need to transform our dataset into an `sf` object. In the `crs` argument, we define the coordinate reference system of the original data (in this case WGS84, which is defined by the EPSG code `4326`).
-
+We will plot the tracks with the package `ggOceanMaps` that will show the tracks on the map of the Earth, with limits set in Longitude and Latitude of our data (`bbox`below). This package is convenient since it deals with Longitude and Latitude, and there is no need to transform our dataset into an `sf` object. In the `crs` argument, we define the coordinate reference system of the original data (in this case WGS84, which is defined by the EPSG code `4326`).
 
 ```{r plot_gps_data, warning=FALSE, attr.source = ".numberLines"}
 # Define the geographical limits (box) of the background map: c(min_lon,max_lon,min_lat,max_lat)
-bbox <-c(min(tracks_gps$x),max(tracks_gps$x),min(tracks_gps$y),max(tracks_gps$y))
+bbox <-c(min(tracks_gps$x), max(tracks_gps$x),
+         min(tracks_gps$y), max(tracks_gps$y))
 
 #Plot the data, with background map
 basemap(limits = c(bbox), bathymetry = TRUE) + 
@@ -127,11 +128,10 @@ basemap(limits = c(bbox), bathymetry = TRUE) +
   ggtitle("Movement data of the narwhals")
 ```
 
-CHANGE TO UTM??
+We can see that even though its the data for only 3 narwhals, that there are more than 3 tracks. 
+These represent the splitted tracks we created every time we had a data gap longer than 1 hr.
 
-## Covariates and data streams
-
-ADD SPATIAL COVARIATE BATHY??
+# Covariates and data streams
 
 Next, we need to derive our data streams (step lengths and turning angles) and covariates. 
 We don't have any spatial covariates, but we could interpolate them now if we did.
@@ -551,9 +551,7 @@ pb <- read.csv("data/WH_X33406_location_data-1.csv")
 head(pb)
 ```
 
-# Bonus
-
-## Handling irregular data
+# Extra: handling irregular data {#sec-narwhal-reg}
 
 First, let's import the raw Fastloc GPS narwhal data and convert the time column to an appropriate date format.
 
