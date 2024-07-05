@@ -26,7 +26,7 @@ Photo Credits: Paul Nicklen
 - Download and unzip workshop zip from Github
 - Install all the required packages as described in 0_Installing_packages.Rmd
 - Make sure all packages are up-to-date as older versions may not work
-- Modify the R Markdown file provided [.Rmd](./1_Morning_Tutorial/Tutorial_files/Tutorial_Narwhal_morning.Rmd) or 
-create a new R or R Markdown file in the ISEC2024_HMM_workshop directory and follow along with the tutorial [html](./1_Morning_Tutorial/Tutorial_files/Tutorial_Narwhal_morning.html) file.
+- Modify the R Markdown file provided [.Rmd](./Tutorial_files/Tutorial_Narwhal_morning.Rmd) or 
+create a new R or R Markdown file in the ISEC2024_HMM_workshop directory and follow along with the tutorial [html](./Tutorial_files/Tutorial_Narwhal_morning.html) file.
 
 Let's go !
