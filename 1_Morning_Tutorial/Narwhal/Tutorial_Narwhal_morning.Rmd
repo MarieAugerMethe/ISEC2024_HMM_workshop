@@ -28,8 +28,8 @@ knitr::opts_chunk$set(echo = TRUE)
 
 
 The goal of this tutorial is to explore how to fit hidden Markov models
-(HMMs) to movement data. To do so, we will investigate the R package
-`momentuHMM`, which was developed by Brett McClintock and Théo Michelot. 
+(HMMs) to movement data. To do so, we will use the R package `momentuHMM`, 
+which was developed by Brett McClintock and Théo Michelot. 
 This package builds on a slightly older package,
 `moveHMM`, that was developed by Théo Michelot, Roland Langrock, and
 Toby Patterson, see associated paper:
@@ -42,18 +42,16 @@ see associated paper:
 
 The primary learning objectives in this first tutorial are to:
 
-1. Select an appropriate resolution for the data
-2. Handle missing locations
-3. Fit simple HMMs using `momentuHMM`
-4. Checking model fit
-5. Determining number of states to use 
-6. Incorporating and interpreting covariates on behaviour transition probabilities
-7. Incorporating covariates in the observation model
+1. Fit simple HMMs using `momentuHMM`
+2. Checking model fit
+3. Determining number of states to use 
+4. Incorporating and interpreting covariates on behaviour transition probabilities
+5. Incorporating covariates in the observation model
 
 ## Setup
 
-First, let's load the packages that we will need to complete the
-analyses. Of course you need to have them installed first.
+First, let's load the packages that we will need to complete the analyses. 
+Of course you need to have them installed first.
 
 ```{r Load packages,include = FALSE, attr.source = ".numberLines"}
 library(momentuHMM) # Package for fitting HMMs, builds on moveHMM
