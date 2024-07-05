@@ -1,6 +1,6 @@
 ---
 title: 'Hidden Markov Models: Basics for animal movement data' 
-author: "Marie Auger-Méthé, Ron Togunov, Fanny Dupont, Natasha Klappstein, Arturo Esquivel"
+author: "Marie Auger-Méthé, Fanny Dupont, Ron Togunov, Natasha Klappstein, Arturo Esquivel"
 output: 
   bookdown::html_document2:
     number_sections: true
@@ -23,23 +23,24 @@ pre.numberSource code
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+
 # Tutorial goals and set up
-<p style='text-align: justify;'>
+
 
 The goal of this tutorial is to explore how to fit hidden Markov models
 (HMMs) to movement data. To do so, we will investigate the R package
-`momentuHMM`. This package builds on a slightly older package,
+`momentuHMM`, which was developed by Brett McClintock and Théo Michelot. 
+This package builds on a slightly older package,
 `moveHMM`, that was developed by Théo Michelot, Roland Langrock, and
 Toby Patterson, see associated paper:
 <https://besjournals.onlinelibrary.wiley.com/doi/full/10.1111/2041-210X.12578>.
-`momentuHMM`, was developed by Brett McClintock and Théo Michelot.
-momentuHMM has new features such as allowing for more data streams,
-inclusion of covariates as raster layers, and much more, see associated
-paper:
+`momentuHMM` has new features such as allowing for more data streams,
+inclusion of covariates as raster layers, and much more, 
+see associated paper:
 <https://besjournals.onlinelibrary.wiley.com/doi/abs/10.1111/2041-210X.12995>.
-</p>
-The primary learning objectives in this first tutorial are to:
 
+
+The primary learning objectives in this first tutorial are to:
 
 1. Select an appropriate resolution for the data
 2. Handle missing locations
@@ -66,16 +67,17 @@ library(lubridate)  # transform numeric vectors to POSIXct objects.
 library(sf)         # spatial data processing
 library(kableExtra) # produce visually appealing tables
 ```
-<p style='text-align: justify;'> 
-While the `raster` package is being phased out in favour of the new `terra` package, `momentuHMM` still relies on the `raster` package to extract covariates. Therefore, for this tutorial we will still use `raster`, but do start working with `terra` in your work where possible.  Make sure to set working directory to "CANSSI_OTN_HMM_2023" of the HMM workshop folder:
-</p>
+
+While the `raster` package is being phased out in favour of the new `terra` package, `momentuHMM` still relies on the `raster` package to extract covariates. Therefore, for this tutorial we will still use `raster`, but do start working with `terra` in your work where possible.  
+
+Make sure to set working directory to "ISEC2024_HMM_workshop/1_Morning_Tutorial" of the HMM workshop folder:
+
 ```{r, eval=FALSE, warning=FALSE, attr.source = ".numberLines"}
 setwd("Narwhal")
 ```
-<p style='text-align: justify;'> 
 
 We will need the functions in the following file `utility_functions.R`
-```{r load function}
+```{r load function, attr.source = ".numberLines"}
 source("utility_functions.R")
 ```
 
@@ -85,41 +87,27 @@ locations at a set temporal frequency (e.g., every $2$ hrs). Without
 reprocessing, HMMs are not suitable for irregular times series
 of locations or locations with large measurement error (e.g., you would
 need to preprocess Argos data before applying HMMs).
-</p>
-<p style='text-align: justify;'> 
-Unfortunately, movement of aquatic
-species is rarely taken at regular time intervals and without
-measurement error. The data set we will work on, is the
-movement track of three narwhals tagged with a Fastlock GPS tag for two weeks, provided by Dr. Marianne Marcoux. For simplicity, we only examine the GPS data from two weeks in August 2017 for three individuals. We only use the fastloc GPS data, so we don't have to deal with location error.
-</p>
+
+
+Unfortunately, movement of aquatic species is rarely taken at regular time intervals and without
+measurement error. 
+The data set we will work on, is the movement track of three narwhals tagged with a Fastlock GPS tag for two weeks, provided by Dr. Marianne Marcoux. For simplicity, we only examine the GPS data from two weeks in August 2017. 
+
 # Import data and initial data processing
-<p style='text-align: justify;'> 
+
 First, let's import the narwhal movement data and convert the time column to an appropriate date format.
-</p>
 
 ```{r import_tracks, warning=FALSE, attr.source = ".numberLines"}
-tracks_gps <- read.csv("data/tracks_gps.csv")%>%
+tracks_gps <- read.csv("data/tracks_clean.csv") %>%
   mutate(time = ymd_hms(time))
 ```
 
 We can have a first look at the data, to get more familiar with it.
-```{r look}
+
+```{r look, attr.source = ".numberLines"}
 head(tracks_gps)
 ```
 
-<p style='text-align: justify;'>
-The data we obtain is often quite messy with some records missing information and other records duplicated. We can filter records to keep only complete location data using `!is.na(x) & !is.na(y)`. To remove duplicate records (same time, location, and location class), we will use the `lag` function from `dplyr`, which will use the value from the previous row so that we can compare to the current row.
-</p>
-
-```{r remove_missing_or_duplicate_data, warning = FALSE, attr.source = ".numberLines"}
-tracks_gps <- tracks_gps %>% 
-  # remove missing locations
-  filter(!is.na(x) & !is.na(y),
-         # remove identical records
-         !(time == lag(time) & x == lag(x) & y == lag(y) & loc_class == lag(loc_class)))
-```
-
-<p style='text-align: justify;'> 
 Now we will plot the tracks with a new package `ggOceanMaps` that will show the tracks on the map of the Earth, with limits set in Longitude and Latitude of our data (`bbox`below). This package is convenient since it deals with Longitude and Latitude, and there is no need to transform our dataset into an `sf` object. In the `crs` argument, we define the coordinate reference system of the original data (in this case WGS84, which is defined by the EPSG code `4326`).
 </p>
 
