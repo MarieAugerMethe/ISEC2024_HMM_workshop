@@ -81,6 +81,8 @@ We will need the functions in the following file `utility_functions.R`
 source("utility_functions.R")
 ```
 
+# Import data and initial data processing
+
 HMMs assume that locations are taken at regular time steps and that there is negligible position
 error. For example, HMMs are adequate to use on GPS tags that take
 locations at a set temporal frequency (e.g., every $2$ hrs). Without
@@ -91,14 +93,16 @@ need to preprocess Argos data before applying HMMs).
 
 Unfortunately, movement of aquatic species is rarely taken at regular time intervals and without
 measurement error. 
-The data set we will work on, is the movement track of three narwhals tagged with a Fastlock GPS tag for two weeks, provided by Dr. Marianne Marcoux. For simplicity, we only examine the GPS data from two weeks in August 2017. 
+The data set we will work on, is the movement track of three narwhals tagged with a Fastlock GPS tag for two weeks, provided by Dr. Marianne Marcoux. 
+For simplicity, we only examine the GPS data from two weeks in August 2017. 
 
-# Import data and initial data processing
+We have already regularized the tracks , to see more information on why these choices were made see section XX below.
 
-First, let's import the narwhal movement data and convert the time column to an appropriate date format.
+
+First, let's import the narwhal regularized movement data and convert the time column to an appropriate date format.
 
 ```{r import_tracks, warning=FALSE, attr.source = ".numberLines"}
-tracks_gps <- read.csv("data/tracks_clean.csv") %>%
+tracks_gps <- read.csv("data/tracks_regular.csv") %>%
   mutate(time = ymd_hms(time))
 ```
 
@@ -108,139 +112,23 @@ We can have a first look at the data, to get more familiar with it.
 head(tracks_gps)
 ```
 
-Now we will plot the tracks with a new package `ggOceanMaps` that will show the tracks on the map of the Earth, with limits set in Longitude and Latitude of our data (`bbox`below). This package is convenient since it deals with Longitude and Latitude, and there is no need to transform our dataset into an `sf` object. In the `crs` argument, we define the coordinate reference system of the original data (in this case WGS84, which is defined by the EPSG code `4326`).
-</p>
+The data is projected in UTM  zone XX.
+
+Now we will plot the tracks with the package `ggOceanMaps` that will show the tracks on the map of the Earth, with limits set in Longitude and Latitude of our data (`bbox`below). This package is convenient since it deals with Longitude and Latitude, and there is no need to transform our dataset into an `sf` object. In the `crs` argument, we define the coordinate reference system of the original data (in this case WGS84, which is defined by the EPSG code `4326`).
+
 
 ```{r plot_gps_data, warning=FALSE, attr.source = ".numberLines"}
-#Define the geographical limits (box) of the background map: c(min_lon,max_lon,min_lat,max_lat)
+# Define the geographical limits (box) of the background map: c(min_lon,max_lon,min_lat,max_lat)
 bbox <-c(min(tracks_gps$x),max(tracks_gps$x),min(tracks_gps$y),max(tracks_gps$y))
 
 #Plot the data, with background map
 basemap(limits = c(bbox), bathymetry = TRUE) + 
   geom_spatial_path(data = tracks_gps, 
-                    aes(x = x, y = y,colour=factor(ID)), crs = 4326)+
+                    aes(x = x, y = y, colour=factor(ID)), crs = 4326) +
   ggtitle("Movement data of the narwhals")
-
 ```
 
-
-# Selecting a time interval for the HMM
-
-<p style='text-align: justify;'> 
-An HMM assumes the observations are collected in discrete time and that there is no missing data in the predictor variables. When the data is irregular, there are two key decisions we must make, (1) the temporal resolution to use, and (2) how to address data gaps. The desired resolution depends predominantly on the biological question you are asking, as different behaviours and biological processes occur at different spatial and temporal scales (e.g., seasonal migration, daily movement between foraging and resting grounds, and fine scale foraging decisions). Generally, higher resolution data is preferred as it has more information. However, it is possible to have too-high of a resolution wherein information from fine-scale variability drowns out the signal from coarse-scale patterns of interest (e.g., seasonal migration). My rule of thumb, is that you want 3-50 data points per behaviour. For behaviours spanning several hours, that roughly corresponds to a desired resolution between 2 min and 60 min. </p>
-
-
-<p style='text-align: justify;'> 
-First, let's calculate the time difference between successive records using `difftime` and `lead` (compares current row to following row) and place these values in a new column called `dt`. Note that the time difference is in minutes (`units = "mins"`). For the last record of each individual (i.e., when `ID != lead(ID)`), we will set the value to `NA`.
-</p>
-
-```{r calc_dt, attr.source = ".numberLines"}
-# Calculate time difference between locations
-tracks_gps <- tracks_gps %>%
-  mutate(dt = ifelse(ID == lead(ID), # If next data row is same individual
-                     # calculate time difference
-                     difftime(lead(time), time, units = "mins"), NA))
-```
-
-Let's see what resolutions may be possible in the data by looking at the most frequent time gaps.
-
-```{r calc_track_dt, attr.source = ".numberLines", fig.width = 10, fig.height = 4}
-# Visualise time differences (all and zoomed)
-par(mfrow = c(1, 2))
-hist(tracks_gps$dt, 1000, main = NA, xlab = "Time difference (min)")
-hist(tracks_gps$dt, 1000, main = NA, xlab = "Time difference (min)", xlim = c(0,100))
-```
-
-```{r calc_track_dt2, attr.source = ".numberLines", collapse=TRUE}
-# identify the most frequent dt
-tracks_gps %>% 
-  {table(.$dt)} %>% 
-  sort(decreasing = TRUE) %>% 
-  head()
-```
-
-We see that the most frequent time gap is $10$ min, followed by $11$, $12$, $22$, $9$ and $13$ min. We also see the majority of the gaps are $< 60$ min, however some are in excess of $600$ min. Because HMMs assume observations taken at regular time intervals, finer resolutions will contain more data gaps that would need to be interpolated. Frequent and large data gaps can be difficult to handle, especially as the number of missing data points approaches or exceeds the existing data. Let's examine the potential data structure at different resolutions for the different animals.
-
-We can now use the function `p_na` (in the script `utility_functions.R`) to look at the proportion of NAs we would get with 10, 20, 30, and 60 min resolution.
-
-```{r track_resolution_proportion_NA, attr.source = ".numberLines"}
-# summarise track dt
-tracks_gps %>% 
-  group_by(ID) %>% 
-  summarise(p_NA_10m = p_na(time, 10),     # 10 min 
-            p_NA_20m = p_na(time, 20),     # 20 min 
-            p_NA_30m = p_na(time, 30),     # 30 min 
-            p_NA_60m = p_na(time, 60)) %>% # 60 min
-  # return formatted table
-  kable(digits = 3, col.names = c("Narwhal ID", paste(c(10,20,30,60), "m"))) %>%
-  kable_styling() %>% 
-  add_header_above(c("", "Resolution" = 4))
-```
-<p style='text-align: justify;'> 
-
-Here we see that the $10$ min interval, around $50\%$ of the locations would be missing. This is a lot, but if we choose finer resolutions, simulated data would outweigh real data, and may bias the results. 
-For this tutorial, we will use a $10$ min resolution.
-</p>
-# Handling data gaps 
-There are several ways to deal with data gaps:
-
-1. Split tracks
-2. Interpolate locations
-3. Fill the gaps with NAs
-4. Multiple imputation
-
-
-In this tutorial, we will combine options 1 and 2, using path segmentation. The basic steps are:
-
-1. Splitting tracks
-2. Interpolating locations within each track segment
-
-## Splitting tracks
-One way to account for missing data is to split the track where there are large gaps (i.e., assign each track segment a new individual ID). This may be particularly appropriate for gaps where we may reasonably expect that the underlying states are effectively independent of one another, or long enough gaps that we don't expect any interpolation method to perform well. We can split the tracks for gaps larger than a predetermined threshold by iterating the ID column. Here, we will use a function (found in `utility_functions.R`) to split the tracks. We define the maximum allowable gap (at which point it will start a new segment), as well as the shortest allowable track segment. These are somewhat arbitrary decisions, and depend on your subsequent choices for regularisation. In this tutorial, we will be interpolating missing locations (within each segment) and so we only want to allow gaps that can reasonably be predicted. We're using a 10-minute resolution, so we allow a 60 minute gap (i.e., we assume we can predict 6 missing locations), and we want each segment to be at least 20 locations long so that we have enough information about state transitions.
-
-```{r segmentation, attr.source = ".numberLines"}
-# Use function from utility_function.R to split data at gaps > 2 hours
-data_split <- split_at_gap(data = tracks_gps, 
-                           max_gap = 60, 
-                           shortest_track = 20)
-```
-
- An alternative to this approach is to fill large gaps with NAs, but this can be problematic if there is any covariate-dependence on the transition probabilities. You can find some code at the end of this tutorial, that handles missing data by setting the gaps to NAs, using the package `adehabitatLT`.
-
-## Interpolation (correlated random walk)
-
-Once the track is split, there is often still irregularity within each segments, and we want to interpolate or predict new locations to form a regular grid of observations. The simplest approach is to use linear interpolation between missing times, but a better option is to predict locations from a continuous-time correlated random walk (CTCRW). `momentuHMM` contains wrapper functions to interpolate missing locations by fitting a CTCRW to the data based on the `crawl` package by Devin Johnson and Josh London. There are many options to fit the CTCRW model, and a detailed tutorial for analysis with `crawl` is available here: <https://jmlondon.github.io/crawl-workshop/crawl-practical.html>. Let's try to fit the most basic model using the wrapper function `crawlWrap`. In the most basic form, we only need to provide tracking data with the columns `ID`, `time`, `x`, and `y` and specify the desired temporal resolution. 
-
-First, let us transform the data into an `sf` object. `crawlWrap` can also take a data.frame as an argument but that would imply renaming some of our columns. It is easier to just transform the data into an `sf`  object.
-
-
-```{r define_projection, message=FALSE, attr.source = ".numberLines"}
-data_sf <- data_split %>%
-  st_as_sf(coords = c("x", "y")) %>% # converts to an sf object
-  st_set_crs(4326) %>% # define CRS
-  st_transform(2962) # reproject data to a UTM
-
-```
-
-Now we can fit the CTCRW to each track segment and create a dataframe of predicted locations.
-
-```{r crawl_10_min_gps, attr.source = ".numberLines", message=FALSE, warning= FALSE, cache=TRUE, collapse=TRUE}
-# crawl can fail to fit periodically, so I recommend always setting a seed 
-set.seed(12)
-
-# fit crawl
-crwOut <- crawlWrap(obsData = data_sf, timeStep = "10 mins", theta = c(7, 0))
-plot(crwOut, animals = "T172062-3", ask = FALSE)
-
-# Get predicted tracks from crawl output
-data <- crwOut$crwPredict[which(crwOut$crwPredict$locType == "p"),
-                              c( "ID", "mu.x", "mu.y", "time")]
-colnames(data) <- c( "ID","x", "y", "time")
-```
-
-Notice how the predicted tracks do not make perfectly straight lines through missing sections, which is an improvement on simple linear interpolation methods. The last approach to estimate missing locations and regularise the data that is not covered here is multiple imputation. 
-
-Multiple imputation works by first fitting a CTCRW model to the original data, second, drawing (i.e., simulating) a number of realisations of the position process based on the CTCRW model, third, fitting HMMs to each of the simulated realisations, and finally, pooling the estimated parameters. `momentuHMM` has several functions to implement multiple imputation. The function MIfitHMM can be used both to simulate realisations of a fitted CTCRW and fit HMMs to each one. The number of simulations is specified with `nSims`. We can simulate realisations without fitting HMMs by setting `fit = FALSE`. You can have a look at the bonus section if you are interested in performing multiple imputations to handle missing data.
+CHANGE TO UTM??
 
 ## Covariates and data streams
 Next, we need to derive our data streams (step lengths and turning angles) and covariates. We don't have any spatial covariates, but we could interpolate them now if we did. Rather, we will be using a time of day covariate later in our tutorial, so we will derive this covariate now.
@@ -639,8 +527,182 @@ AIC(mod_obs)  # time of day effect on observation parameters
 
 This indicates the the model with a time-varying mean step length is the best fitting model. 
 
-## Bonus
-### Pad gaps with NAs
+# Bonus
+
+## Handling irregular data
+
+First, let's import the raw Fastloc GPS narwhal data and convert the time column to an appropriate date format.
+
+```{r import_tracks, warning=FALSE, attr.source = ".numberLines"}
+tracks_gps_O <- read.csv("data/tracks_fastloc_gps.csv") %>%
+  mutate(time = ymd_hms(time))
+```
+
+We can have a first look at the data, to get more familiar with it.
+
+```{r look}
+head(tracks_gps_O)
+```
+
+The data we obtain is often quite messy with some records missing information and other records duplicated. We can filter records to keep only complete location data using `!is.na(x) & !is.na(y)`. To remove duplicate records (same time, location, and location class), we will use the `lag` function from `dplyr`, which will use the value from the previous row so that we can compare to the current row.
+
+```{r remove_missing_or_duplicate_data, warning = FALSE, attr.source = ".numberLines"}
+tracks_gps_O <- tracks_gps_O %>% 
+  # remove missing locations
+  filter(!is.na(x) & !is.na(y),
+         # remove identical records
+         !(time == lag(time) & x == lag(x) & y == lag(y) & loc_class == lag(loc_class)))
+```
+
+Now we will plot the tracks with a new package `ggOceanMaps` that will show the tracks on the map of the Earth, with limits set in Longitude and Latitude of our data (`bbox`below). This package is convenient since it deals with Longitude and Latitude, and there is no need to transform our dataset into an `sf` object. In the `crs` argument, we define the coordinate reference system of the original data (in this case WGS84, which is defined by the EPSG code `4326`).
+
+```{r plot_gps_data, warning=FALSE, attr.source = ".numberLines"}
+# Define the geographical limits (box) of the background map: c(min_lon,max_lon,min_lat,max_lat)
+bbox <-c(min(tracks_gps_O$x), max(tracks_gps_O$x), 
+         min(tracks_gps_O$y), max(tracks_gps_O$y))
+
+# Plot the data, with background map
+basemap(limits = c(bbox), bathymetry = TRUE) + 
+  geom_spatial_path(data = tracks_gps_O, 
+                    aes(x = x, y = y,colour=factor(ID)), crs = 4326)+
+  ggtitle("Movement data of the narwhals")
+```
+
+
+# Selecting a time interval for the HMM
+
+An HMM assumes the observations are collected in discrete time and that there is no missing data in the predictor variables. When the data is irregular, there are two key decisions we must make, (1) the temporal resolution to use, and (2) how to address data gaps. The desired resolution depends predominantly on the biological question you are asking, as different behaviours and biological processes occur at different spatial and temporal scales (e.g., seasonal migration, daily movement between foraging and resting grounds, and fine scale foraging decisions). Generally, higher resolution data is preferred as it has more information. However, it is possible to have too-high of a resolution wherein information from fine-scale variability drowns out the signal from coarse-scale patterns of interest (e.g., seasonal migration). A good rule of thumb, is that you want 3-50 data points per behaviour. For behaviours spanning several hours, that roughly corresponds to a desired resolution between 2 min and 60 min.
+
+First, let's calculate the time difference between successive records using `difftime` and `lead` (compares current row to following row) and place these values in a new column called `dt`. Note that the time difference is in minutes (`units = "mins"`). For the last record of each individual (i.e., when `ID != lead(ID)`), we will set the value to `NA`.
+
+```{r calc_dt, attr.source = ".numberLines"}
+# Calculate time difference between locations
+tracks_gps_O <- tracks_gps_O %>%
+  mutate(dt = ifelse(ID == lead(ID), # If next data row is same individual
+                     # calculate time difference
+                     difftime(lead(time), time, units = "mins"), NA))
+```
+
+Let's see what resolutions may be possible in the data by looking at the most frequent time gaps.
+
+```{r calc_track_dt, attr.source = ".numberLines", fig.width = 10, fig.height = 4}
+# Visualise time differences (all and zoomed)
+par(mfrow = c(1, 2))
+hist(tracks_gps_O$dt, 1000, main = NA, xlab = "Time difference (min)")
+hist(tracks_gps_O$dt, 1000, main = NA, xlab = "Time difference (min)", xlim = c(0,100))
+```
+
+```{r calc_track_dt2, attr.source = ".numberLines", collapse=TRUE}
+# identify the most frequent dt
+tracks_gps_O %>% 
+  {table(.$dt)} %>% 
+  sort(decreasing = TRUE) %>% 
+  head()
+```
+
+We see that the most frequent time gap is $10$ min, followed by $11$, $12$, $22$, $9$ and $13$ min. We also see the majority of the gaps are $< 60$ min, however some are in excess of $600$ min. Because HMMs assume observations taken at regular time intervals, finer resolutions will contain more data gaps that would need to be interpolated. Frequent and large data gaps can be difficult to handle, especially as the number of missing data points approaches or exceeds the existing data. Let's examine the potential data structure at different resolutions for the different animals.
+
+We can now use the function `p_na` (in the script `utility_functions.R`) to look at the proportion of NAs we would get with 10, 20, 30, and 60 min resolution.
+
+```{r track_resolution_proportion_NA, attr.source = ".numberLines"}
+# summarise track dt
+tracks_gps_O %>% 
+  group_by(ID) %>% 
+  summarise(p_NA_10m = p_na(time, 10),     # 10 min 
+            p_NA_20m = p_na(time, 20),     # 20 min 
+            p_NA_30m = p_na(time, 30),     # 30 min 
+            p_NA_60m = p_na(time, 60)) %>% # 60 min
+  # return formatted table
+  kable(digits = 3, col.names = c("Narwhal ID", paste(c(10,20,30,60), "m"))) %>%
+  kable_styling() %>% 
+  add_header_above(c("", "Resolution" = 4))
+```
+
+Here we see that the $10$ min interval, around $50\%$ of the locations would be missing. 
+
+This is a lot, but choosing finer resolutions would likely bias the results. 
+
+For this tutorial, we will use a $10$ min resolution, though in many cases we may want to be more conservative and use a 30 min resolution.
+
+# Handling data gaps 
+
+There are several ways to deal with data gaps:
+
+1. Split tracks
+2. Interpolate locations
+3. Fill the gaps with NAs
+4. Multiple imputation
+
+
+To create the data used in this  tutorial, we combined options 1 and 2. The basic steps are:
+
+1. Splitting tracks
+2. Interpolating locations within each track segment
+
+## Splitting tracks
+
+One way to account for missing data is to split the track where there are large gaps (i.e., assign each track segment a new individual ID). 
+This strategy is particularly appropriate when you have long enough gaps for which interpolation method are unlikely to perform well. 
+We can split the tracks when the gaps larger than a predetermined threshold by iterating the ID column. 
+Here, we will use a function (found in `utility_functions.R`) to split the tracks. 
+We define the maximum allowable gap (at which point it will start a new segment), as well as the shortest allowable track segment. 
+
+These are somewhat arbitrary decisions, and depend on your subsequent choices for regularisation. In this tutorial, we will be interpolating missing locations (within each segment) and so we only want to allow gaps that can reasonably be predicted. 
+We're using a 10-minute resolution, so we allow a 60 minute gap (i.e., we assume we can predict 6 missing locations), and we want each segment to be at least 20 locations long so that we have enough information about state transitions.
+
+```{r segmentation, attr.source = ".numberLines"}
+# Use function from utility_function.R to split data at gaps > 2 hours
+data_split <- split_at_gap(data = tracks_gps_O, 
+                           max_gap = 60, 
+                           shortest_track = 20)
+```
+
+An alternative to this approach is to fill large gaps with NAs, but this can be problematic if there is any covariate-dependence on the transition probabilities. You can find some code further below, that handles missing data by setting the gaps to NAs, using the package `adehabitatLT`.
+
+## Interpolation (correlated random walk)
+
+Once the track is split, there is often still irregularity within each segments, and we want to interpolate or predict new locations to form a regular grid of observations. 
+
+The simplest approach is to use linear interpolation between missing times, but a better option is to predict locations from a continuous-time correlated random walk (CTCRW). 
+`momentuHMM` contains wrapper functions to interpolate missing locations by fitting a CTCRW to the data based on the `crawl` package by Devin Johnson and Josh London. There are many options to fit the CTCRW model, and a detailed tutorial for analysis with `crawl` is available here: <https://jmlondon.github.io/crawl-workshop/crawl-practical.html>. Let's try to fit the most basic model using the wrapper function `crawlWrap`. In the most basic form, we only need to provide tracking data with the columns `ID`, `time`, `x`, and `y` and specify the desired temporal resolution. 
+
+First, let us transform the data into an `sf` object. `crawlWrap` can also take a data.frame as an argument but that would imply renaming some of our columns. It is easier to just transform the data into an `sf`  object.
+
+
+```{r define_projection, message=FALSE, attr.source = ".numberLines"}
+data_sf <- data_split %>%
+  st_as_sf(coords = c("x", "y")) %>% # converts to an sf object
+  st_set_crs(4326) %>% # define CRS
+  st_transform(2962) # reproject data to a UTM
+```
+
+Now we can fit the CTCRW to each track segment and create a dataframe of predicted locations.
+
+```{r crawl_10_min_gps, attr.source = ".numberLines", message=FALSE, warning= FALSE, cache=TRUE, collapse=TRUE}
+# crawl can fail to fit periodically, so I recommend always setting a seed 
+set.seed(12)
+
+# fit crawl
+crwOut <- crawlWrap(obsData = data_sf, timeStep = "10 mins", theta = c(7, 0))
+plot(crwOut, animals = "T172062-3", ask = FALSE)
+
+# Get predicted tracks from crawl output
+data <- crwOut$crwPredict[which(crwOut$crwPredict$locType == "p"),
+                              c( "ID", "mu.x", "mu.y", "time")]
+colnames(data) <- c( "ID","x", "y", "time")
+```
+
+```{r save_regularized_file, eval=FALSE, include=FALSE}
+data_reg <- st_as_sf(data, coords = c("x", "y")) %>% st_set_crs(2962) %>% st_transform(4326)
+data_reg_df <- data_reg %>% mutate(x = st_coordinates(data_reg)[,"X"], y = st_coordinates(data_reg)[,"Y"]) %>% st_drop_geometry()
+data_reg_df$time <- format(data_reg_df$time, "%Y-%m-%d %H:%M:%OS", tz = "UTC", justify = "none")
+
+write.csv(data_reg_df, "data/tracks_regular.csv", row.names = FALSE)
+```
+
+Notice how the predicted tracks do not make perfectly straight lines through missing sections, which is an improvement on simple linear interpolation methods. 
+
+## Pad gaps with NAs
 We mentioned previously that another strategy to address data gaps is to leave the data streams (i.e., step length and turning angle) as NAs. The maximum size of a gap to allow depends on the frequency of the missing data, frequency of locations, study species, and behaviours of interest. Voiding gaps can be used on its own or in conjunction with splitting tracks. The package `adehabitatLR` has a function `setNA` dedicated to it.
 
 Let us first install and load the package.
@@ -665,8 +727,11 @@ colnames(data_na) <- c("ID", "x", "y", "time")
 ```
 
 
-### Multiple Imputation
-Here, let’s use first fit a CTCRW model on complete tracks (not segmented) that we fit in the tutorial  to simulate 4 tracks using MIfitHMM and plot them over the original track.
+## Multiple Imputation
+
+Multiple imputation works by first fitting a CTCRW model to the original data, second, drawing (i.e., simulating) a number of realisations of the position process based on the CTCRW model, third, fitting HMMs to each of the simulated realisations, and finally, pooling the estimated parameters. `momentuHMM` has several functions to implement multiple imputation. The function MIfitHMM can be used both to simulate realisations of a fitted CTCRW and fit HMMs to each one. The number of simulations is specified with `nSims`. We can simulate realisations without fitting HMMs by setting `fit = FALSE`.
+
+Here, let’s use first fit a CTCRW model on complete tracks (not segmented) that we fit in the tutorial to simulate 4 tracks using MIfitHMM and plot them over the original track.
 
 ```{r MI, attr.source = ".numberLines"}
 set.seed(12)
