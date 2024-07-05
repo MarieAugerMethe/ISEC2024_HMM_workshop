@@ -1,8 +1,23 @@
-# CANSSI OTN Hidden Markov Model Workshop 2023
+# International Statistical Ecology Conference (ISEC) Hidden Markov Model Workshop 2024
 
 ## Description and format
 
-This workshop was developed by Fanny Dupont, Natasha Klappstein, Arturo Esquivel, Marco Gallegos Herrada, Vinky Wang, Eric Ste-Marie, Ron Togunov, Vianey Leos Barajas, and Marie Auger-Méthé, for the 2023 CANSSI meeting and OTN ECR workshop. The goal of the workshop is to illustrate how hidden Markov models (HMMs) can be used to classify behaviours and identify behaviour-specific habitat associations using a range of movement and biologging data. It is divided in two parts: morning and afternoon.
+This workshop was developed by Fanny Dupont,Vianey Leos Barajas, and Marie Auger-Méthé, with special guest speaker Brett McClintock, for the 2024 ISEC in Swansea. The tutorial materials is based on previous tutorials given by member of the teams as well as past contributors: Natasha Klappstein, Arturo Esquivel, Marco Gallegos Herrada, Vinky Wang, Eric Ste-Marie, and Ron Togunov.
+
+The goal of the workshop is to illustrate how hidden Markov models (HMMs) can be used to classify behaviours and identify behaviour-specific habitat associations using a range of movement and biologging data. It is divided in two parts: morning and afternoon.
+
+## Tentitative schedule
+
+ 9:00 Introduction to HMM (presentation)
+ 9:45 Start of animal movement tutorial
+10:30 Break
+11:00 End of animal movement tutorial
+12:00 Lunch
+13:00 Research talk: Brett McClintock - HMMs in ecology
+14:00 Start of accelerometer tutorial
+14:30 Break
+15:00 End of accelerometer tutorial
+16:00 Wrap up
 
 ## Prerequisite experience
 
