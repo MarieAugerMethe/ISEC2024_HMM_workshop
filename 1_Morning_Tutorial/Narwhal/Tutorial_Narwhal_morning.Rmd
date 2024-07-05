@@ -50,10 +50,10 @@ The primary learning objectives in this first tutorial are to:
 6. Incorporating and interpreting covariates on behaviour transition probabilities
 7. Incorporating covariates in the observation model
 
-## Setup and data description
-<p style='text-align: justify;'>
+## Setup
+
 First, let's load the packages that we will need to complete the
-analyses. Of course you need to have them installed first.</p>
+analyses. Of course you need to have them installed first.
 
 ```{r Load packages,include = FALSE, attr.source = ".numberLines"}
 library(momentuHMM) # Package for fitting HMMs, builds on moveHMM
@@ -81,7 +81,7 @@ We will need the functions in the following file `utility_functions.R`
 source("utility_functions.R")
 ```
 
-# Import data and initial data processing
+# Import data with description and processing
 
 HMMs assume that locations are taken at regular time steps and that there is negligible position
 error. For example, HMMs are adequate to use on GPS tags that take
