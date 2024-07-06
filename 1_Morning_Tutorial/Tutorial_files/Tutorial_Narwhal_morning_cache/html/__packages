@@ -3,12 +3,15 @@ sp
 raster
 dplyr
 tidyr
+terra
+tidyterra
 ggplot2
 ggOceanMaps
 ggspatial
 lubridate
 sf
 kableExtra
+geosphere
 crawl
 foreach
 rngtools
