@@ -149,7 +149,7 @@ Later in our tutorial, our first covariate we will be time of day, so we will de
 tracks_gps$tod <- hour(tracks_gps$time) + minute(tracks_gps$time) / 60
 ```
 
-Another covriate we will explore is bathymetry. Let's load the raster. The raw bathymetry data used to create this raster was taken from the the GEBCO global ocean and land terrain model from https://pressbooks.bccampus.ca/ewemodel/chapter/getting-bathymetry/.
+Another covariate we will explore is bathymetry. Let's load the raster. The raw bathymetry data used to create this raster was taken from the the GEBCO global ocean and land terrain model from https://pressbooks.bccampus.ca/ewemodel/chapter/getting-bathymetry/.
 
 ```{r load_bathy, attr.source = ".numberLines"}
 bathy <- raster("data/bathy_4_narwhals.tiff")
