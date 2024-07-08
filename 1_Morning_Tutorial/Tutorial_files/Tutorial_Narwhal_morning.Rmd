@@ -336,8 +336,8 @@ You can see that there is general agreement with the global (Viterbi) and local 
 
 ## Checking the stability of the parameter estimates
 
-The first thing we need to look into is whether the parameter estimates are reliable (i.e., if we are finding the global maximum). 
-As mentioned above, the initial parameter values can affect the estimating procedures. So it’s always good to check if you get similar results with different starting values. Here, we will make the starting values of the two behavioural states closer to one another.
+As mentioned above, the initial parameter values can affect the estimating procedures. Thus, it's important to assess whether the parameter estimates are sensitive to the starting values we used (i.e., checking that we are not clearly at a local maximum). 
+To do so, we check if we get similar results with different starting values. Here, we will make the starting values of the two behavioural states closer to one another.
 
 ```{r inits_check, message=FALSE, attr.source = ".numberLines", cache=TRUE}
 
@@ -363,6 +363,7 @@ Let’s compare the two results. First let’s look at which of the two has the 
 
 # Negative log likelihood
 c(original = mod$mod$minimum, new = mod2$mod$minimum)
+mod$mod$minimum - mod2$mod$minimum
 
 # Parameter estimates
 list(original = mod$mle$step, new = mod2$mle$step)
@@ -372,12 +373,13 @@ list(original = mod$mle$angle, new = mod2$mle$angle)
 list(original = mod$mle$gamma, new = mod2$mle$gamma)
 ``` 
 
-Looks like they both returned the same estimates for everything. So that’s good! The function `fitHMM` also has the argument `retryFits` which perturbs the parameter estimates and retries fitting the model. Since the optimization of HMMs depend on the starting values chosen, it is always good to explore multiple initial values and then choose the best estimates among them (which is done by `retryFits`). The argument is used to indicate the number of times you want perturb the parameters and retry fitting the model (you can choose the size of the perturbation by setting the argument `retrySD)`.
+Looks like they both returned very similar estimates for everything, though the negative log likelihood of the second set of starting values is slightly better. 
+
+The function `fitHMM` also has the argument `retryFits` which perturbs the parameter estimates and retries fitting the model. Since the optimization of HMMs depend on the starting values chosen, it is always good to explore multiple initial values and then choose the best estimates among them (which is done by `retryFits`). The argument is used to indicate the number of times you want perturb the parameters and retry fitting the model (you can choose the size of the perturbation by setting the argument `retrySD)`.
 
 Let’s try (this will take a few minutes).
 
 ```{r retryfits, message=FALSE, attr.source = ".numberLines", cache=TRUE}
-
 # Fit the same 2-state HMM with retryFits
 # This is a random pertubation, so setting the seed to get the same results
 set.seed(29)
@@ -385,7 +387,7 @@ mod_RF <- fitHMM(data,
                  nbState = 2,
                  dist=list(step="gamma", angle="vm"),
                  Par0 = Par0,
-                 retryFits=10)
+                 retryFits = 20)
 ``` 
 
 Let’s compare the results again.
@@ -395,9 +397,11 @@ Let’s compare the results again.
 c(original = mod$mod$minimum, new = mod2$mod$minimum,
   retryFits = mod_RF$mod$minimum)
 
+mod_RF$mod$minimum - mod2$mod$minimum
+
 ``` 
 
-The maximum likelihood was the same in every perturbation, indicating that the optimiser converged to the same estimates.
+The maximum likelihood is again almost identical in every perturbation. However, the model second set of starting values is still slightly better (lower negative log likelihood), and would be the set of starting values to use moving forward.
 
 `momentuHMM` has functions to help selecting initial parameters for complex models, which we will demonstrate later in the tutorial.
 
@@ -405,10 +409,12 @@ The maximum likelihood was the same in every perturbation, indicating that the o
 
 We fitted a model to the data and it looks like the parameter estimates are reliable, but is this a good model for our data? 
 Can we use the model results? 
-The best way to investigate model fit is through pseudo-residuals. Pseudo-residuals are a type of model residuals that account for the interdependence of observations. They are calculated for each of the time series (e.g., you will have pseudo-residuals for the step length time series and for the turning angle time series). If the model fit is appropriate, the pseudo-residuals produced by the functions `pseudoRes` should follow a standard normal distribution. You can look at pseudo-residuals directly via the function `plotPR`, which plots the pseudo-residual times-series, the qq-plots, and the autocorrelation functions (ACF).
+The best way to investigate model fit is through pseudo-residuals. 
+Pseudo-residuals are a type of model residuals that account for the interdependence of observations. 
+They are calculated for each of the time series (e.g., you will have pseudo-residuals for the step length time series and for the turning angle time series). If the model fit is appropriate, the pseudo-residuals produced by the functions `pseudoRes` should follow a standard normal distribution. You can look at pseudo-residuals directly via the function `plotPR`, which plots the pseudo-residual times-series, the qq-plots, and the autocorrelation functions (ACF).
 
 ```{r plotpr, message=FALSE, attr.source = ".numberLines", cache=TRUE}
-plotPR(mod)
+plotPR(mod2)
 ``` 
 
 The ACF plot indicate that the model does not fit the step length time series particularly well. The ACF indicates that there is considerable autocorrelation remaining in the time series, even after accounting for the persistence in the underlying behavioural states.
@@ -439,11 +445,14 @@ We can look at the pseudo residuals for the 3 state model:
 plotPR(mod_3state)
 ``` 
 
-It's better. Not perfect, but less unexplained autocorrelation, especially in the step lengths. If we look at the step length distribution, we can see that we have still our state with really small steps (maybe resting?), a state with steps of medium size (maybe foraging?), and a state with large steps (maybe travelling?). As shown above, looking at the tracks can help better inspect the nature of the states.
+It's better. Not perfect, but less unexplained autocorrelation, especially in the step lengths. 
+If we look at the step length distribution, we can see that we have still our state with really small steps (maybe resting?), a state with steps of medium size (maybe foraging?), and a state with large steps (maybe travelling?).
+As shown above, looking at the tracks can help better inspect the nature of the states.
 
 # Adding covariates to the model
 
-We can add covariates to our HMM to better understand drivers of behaviour. We can either include covariates on the transition probabilities (i.e., the state process) or in the state-dependent distributions (i.e., the observation process). Respectively, these answer the questions: 
+We can add covariates to our HMM to better understand drivers of behaviour. 
+We can either include covariates on the transition probabilities (i.e., the state process) or in the state-dependent distributions (i.e., the observation process). Respectively, these answer the questions: 
 
   * Does a covariate have an effect on the probability of switching between states?
   
@@ -460,29 +469,20 @@ $$\eta_{ij}^{(t)} = \begin{cases}
 	\beta^{(ij)}_0 + \sum_{p=1}^{P} \beta_p^{(ij)} \omega_p^{(t)} & \text{if } i \neq j \\
 	0 & \text{otherwise.}
 	\end{cases} $$
-For each transition probability, $\beta_0^{(ij)}$ is an intercept parameter, and $\beta_p^{(ij)}$ measures the effect of the $p$-th covariate $\omega_p$. 
+For each transition probability, $\beta_0^{(ij)}$ is an intercept parameter, and $\beta_p^{(ij)}$ measures the effect of the $p$-th covariate $\omega_p$.
 
-Here, we will assess if transition probabilities vary as a function of time of day, and we will use a 2-state model for demonstration. The first step is to define our model formula. 
-Since time of day is a cyclic covariate, we must define a relationship that ensures that the transition probabilities are similar at the very end and very beginning of the day. 
-We can do this by specify the transition probabilities as a trigonometric (i.e., cyclic) function of time of day (defined as $\tau$),
+Here, we will will create a model where transition probabilities vary as a function of the bathymetry (i.e., depth of the ocean). Thus $omega_1$ is the bathymetry value associated with that step and we can simply specify with a formula like the one used in simple linear models. 
 
-$$\eta_{ij}^{(t)} = \begin{cases}
-\beta^{(ij)}_0 + \beta_1^{(ij)} \cos \left(\frac{2 \pi \tau_t}{24}\right) +  \beta_2^{(ij)} \sin \left(\frac{2 \pi \tau_t}{24}\right) & \text{if } i \neq j \\
-0 & \text{otherwise} 
-	\end{cases} ,$$
-where 24 refers for the 24 hour period of interest. This relationhip can conveniently be specified with the `cosinor` function. 
-
-```{r set_tpm_formula, message = FALSE, cache = TRUE, attr.source = ".numberLines"}
-# set new formula
-formula <- ~cosinor(tod, period = 24)
+```{r formula_bathy, cache = TRUE, attr.source = ".numberLines"}
+formula_bathy <- ~bathy
 ```
 
-Next, we need to specify initial parameters and we will use the function `getPar0` to do so. This will use the estimated parameters of a previously fitted 2-state model with no covariates. 
+To be able to fit the HMM, we need to specify initial parameters and we will use the function `getPar0` to do so. This will use the estimated parameters of a previously fitted 2-state model with no covariates. 
 Note that it will set the unknown linear predictor parameters to 0, and use the intercept of the previous model. 
 
 ```{r tpm_par0, message = FALSE, cache = TRUE, attr.source = ".numberLines"}
 # set tpm formula and extract initial values from simpler model
-Par0_4 <- getPar0(model = mod, formula = formula)
+Par0_4 <- getPar0(model = mod2, formula = formula_bathy)
 Par0_4
 ```
 
@@ -491,32 +491,51 @@ Then we can fit the model. The `formula` argument defines the model formula for 
 ```{r fit_tpm, message = FALSE, cache = TRUE, attr.source = ".numberLines"}
 # fit model
 mod_tpm <- fitHMM(data,
-                    nbStates=2,
-                    dist=dist,
-                    Par0=Par0_4$Par,
-                    beta0=Par0_4$beta,
-                    formula=formula)
+                  nbStates = 2,
+                  stateNames = stateNames, 
+                  dist = dist,
+                  Par0 = Par0_4$Par,
+                  beta0 = Par0_4$beta,
+                  formula = formula_bathy)
 mod_tpm$mle$beta
 ```
 
-There are several ways to visualise the relationship. If you use the standard `plot()` function on the fitted HMM, you can visualise the transition probabilities directly. Another option is to plot the stationary state probabilities, which represent how likely the animal is to be in each behaviour at each time of day.
+There are several ways to visualise the relationship. If you use the standard `plot()` function on the fitted HMM, you can visualise the transition probabilities directly. Another option is to plot the stationary state probabilities, which represent how likely the animal is to be in each behaviour as a function of the bathymetry.
 
 ```{r, attr.source = ".numberLines"}
 plotStationary(mod_tpm, plotCI = TRUE)
 ```
 
+Here it looks like the "resident" behaviour is less common than the "travelling" behaviour at shallower depth  (e.g., bathy close to 0).
+
 ## Covariates in the observation model
 
-This section will illustrate how to model mean step length as a function of time of day. Any parameter in the observation model (e.g., mean/sd of the step lengths, or turning angle parameters) can be modelled as a function of a covariate,  which allows for the movement behaviour within each discrete state to vary. Here, we will use the same trigonometric function described in the previous section to model mean step length based on the time of day. To do so, we specify `DM`, which will be a list of formulas for the step length (and possibly other) parameters. 
-For simplicity, we will only model the mean, but it is common to also model the standard deviation with the same relationship. 
+This section will illustrate how to model mean step length as a function of a different covariate: time of day. 
+Any parameter in the observation model (e.g., mean or sd of the step lengths, or turning angle parameters) can be modelled as a function of a covariate,  which allows for the movement behaviour within each discrete state to vary. 
+
+Here, we will model mean step length based on the time of day.
+Since time of day is a cyclic covariate, we must define a relationship that ensures that the mean step length are similar at the very end and very beginning of the day. 
+We can do this by specify the mean step length as a trigonometric (i.e., cyclic) function of time of day (defined as $\tau$),
+
+$$\mu_{i}^{(t)} = \beta^{(i)}_0 + \beta_1^{(i)} \cos \left(\frac{2 \pi \tau_t}{24}\right) +  \beta_2^{(i)} \sin \left(\frac{2 \pi \tau_t}{24}\right) $$
+where 24 refers for the 24 hour period of interest. This relationhip can conveniently be specified with the `cosinor` function. 
+
+```{r sformual_tod, message = FALSE, cache = TRUE, attr.source = ".numberLines"}
+# set new formula
+formula_tod <- ~cosinor(tod, period = 24)
+```
+
+
+To do link the formula to the mean step length, we specify `DM`, which will be a list of formulas for the step length (and possibly other) parameters. 
+For simplicity, we will only model the mean, but we could also model the standard deviation with the same relationship. 
 We can derive the initial parameters using the `getPar0` function, as described in the previous section.
 
 ```{r, message=FALSE, cache=FALSE, attr.source = ".numberLines"}
 # define step formula and design matrix
-DM <- list(step = list(mean = formula, sd = ~1))
+DM <- list(step = list(mean = formula_tod, sd = ~1))
 
 # extract initial values from simpler 2-state model with no covariates
-Par0_5 <- getPar0(model = mod, DM = DM)
+Par0_5 <- getPar0(model = mod2, DM = DM)
 ```
 
 Now we can fit the HMM with covariate-dependent observation parameters. 
@@ -524,11 +543,12 @@ Now we can fit the HMM with covariate-dependent observation parameters.
 ```{r, cache = TRUE, message = FALSE, attr.source = ".numberLines"}
 # fit model
 mod_obs <- fitHMM(data, 
-                    nbStates = 2, 
-                    dist = dist, 
-                    Par0 = Par0_5$Par,
-                    beta0 = Par0_5$beta, 
-                    DM = DM)
+                  nbStates = 2, 
+                  stateNames = stateNames, 
+                  dist = dist, 
+                  Par0 = Par0_5$Par,
+                  beta0 = Par0_5$beta, 
+                  DM = DM)
 mod_obs
 ```
 
