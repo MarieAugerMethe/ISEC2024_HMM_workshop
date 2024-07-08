@@ -592,21 +592,21 @@ head(pb)
 The column time is the date and time at which the GPS location was obtained by telemetry collar, while coordinates are in degrees longitude and latitude (Unprojected locations in WGS84 (EPSG:4326). 
 Do the following questions.
 
-## Q1. Fit a simple two-state HMMs.
+**Q1. Fit a simple two-state HMMs.**
 
-## Q2. Look at the state-dependent distribution and describe the movement characteristics associated with each behavioural states.
+**Q2. Look at the state-dependent distribution and describe the movement characteristics associated with each behavioural states.**
 
-## Q3. Identify what proportion of time is spent in each behaviour.
+**Q3. Identify what proportion of time is spent in each behaviour.**
 
-## Q4. Plot the track with the decoded behavioural state
+**Q4. Plot the track with the decoded behavioural state.**
 
-## Q5. Look at the pseudo residuals of the model. Do they indicate any issues with the model? 
+**Q5. Look at the pseudo residuals of the model. Do they indicate any issues with the model?**
 
-## Q6. Assess whether including time of day as a covariate in the transition probabilities improve the model fit. Interpret the results.
+**Q6. Assess whether including time of day as a covariate in the transition probabilities improve the model fit. Interpret the results.**
 
-## Q7. Check if using time of day changes the pseudo-residuals.
+**Q7. Check if using time of day changes the pseudo-residuals.**
 
-## Q8. What modification(s) could be done to improve the model?
+**Q8. What modification(s) could be done to improve the model?**
 
 The answers are found in section \@ref(sec-res-pb) below. But only peak if you are stuck, instead look at the narwhal code.
 
@@ -933,6 +933,16 @@ table(dec_state_pb)/length(dec_state_pb)
 They spend more time in state 2 than in state 1.
 
 ## Q4. Plot the track with the decoded  behavioural state
+
+```{r, attr.source = ".numberLines"}
+# add column for the viterbi sequence and state probabilities
+pb_data$viterbi_state <- factor(dec_state_pb)
+
+# Plot tracks, coloured by viterbi states
+ggplot(pb_data, aes(x, y, col = viterbi_state)) +
+  geom_point(size = 0.5) + geom_path() +
+  scale_color_manual(values = c("#E69F00", "#56B4E9"))
+```
 
 ## Q5. Look at the pseudo residuals of the model. Do they indicate any issues with the model? 
 
