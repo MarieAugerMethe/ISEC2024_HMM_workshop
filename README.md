@@ -38,17 +38,20 @@ The tutorial will be completed together, and can be found in the [activity](./Mo
 
 ### Morning tutorial learning objectives
 
-1. Fit simple HMMs using momentuHMM
+1. Fit simple HMMs using `momentuHMM`
 2. Checking model fit 
 3. Incorporating and interpreting covariates on behaviour transition probabilities
 4. Incorporating covariates in the observation model
+5. (Bonus) 	
+    (a) Select an appropriate resolution for the data
+    (b) Handle missing data
 
 
 ### Morning tutorial instructions
 
-- Work through the tutorial file [activity](./Morning_Tutorial/Activity/Tutorial_Narwhal_morning_activity.Rmd)
-- Follow the slides by opening [slides](./Morning_Tutorial/Morning_Slides.pdf)
-- If you get lost, you can follow along with the completed tutorial [html](./Morning_Tutorial/Narwhal/Tutorial_Narwhal_morning.html) file.
+- Work through the tutorial file [activity](./1_Morning_Tutorial/Activity/Tutorial_Narwhal_morning_activity.Rmd)
+- Follow the slides by opening [slides](./1_Morning_Tutorial/Morning_Slides.pdf)
+- If you get lost, you can follow along with the completed tutorial [html](./1_Morning_Tutorial/Narwhal/Tutorial_Narwhal_morning.html) file.
 
 ## Afternoon Tutorial
 
