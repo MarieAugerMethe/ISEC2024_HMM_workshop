@@ -132,7 +132,7 @@ Note that land values of the bathymetry layer are 0s.
 To get a reference of where these narwhals are swimming, let's also import a land layer.
 
 ```{r import_land, attr.source = ".numberLines"}
-land <- st_read("data/land.shp")
+land <- st_read("data/NorthBaffin.shp")
 ```
 
 Let's plot the narwhal movement data over the bathymetry
@@ -140,7 +140,7 @@ Let's plot the narwhal movement data over the bathymetry
 ```{r plot_gps_data, warning=FALSE, attr.source = ".numberLines"}
 ggplot() +
   geom_spatraster(data=rast(bathy)) +
-  geom_sf(data=land.ll, col="white") +
+  geom_sf(data=land, fill="beige") +
   geom_spatial_path(data = tracks_gps, 
                     aes(x = x, y = y, colour=factor(ID)), crs = 4326) 
 
