@@ -589,16 +589,11 @@ pb <- read.csv("data/pb_track.csv") %>%
 head(pb)
 ```
 
+The column time is the date and time at which the GPS location was obtained by telemetry collar, while coordinates are in degrees longitude and latitude (Unprojected locations in WGS84 (EPSG:4326). 
 
-We only kept the location data
-time: Date of GPS location obtained by telemetry collar. YYYY-MM-DD hh:mm 
-x: X coordinate Degrees longitude
-y: Y coordinate Degrees latitude 
-u10: ‘u’ (west to east) component of wind at 10m elevation2 m/s 
-v10: ‘v’ (south to north) component of wind at 10m elevation2 m/s 
+Fit a simple two-state HMMs.
 
-The locations are unprojected in WGS84 (EPSG:4326), while the wind estimates are bilinearly interpolated from ECMWF’s ERA5 reanalysis: Hersbach, H., Bell, B., Berrisford, P., Hirahara, S., Hora_nyi, A., Mun~oz-Sabater, J., Nicolas, J., Peubey, C., Radu, R., Schepers, D., Simmons, A., Soci, C., Abdalla, S., Abellan, X., Balsamo, G., Bechtold, P., Biavati, G., Bidlot, J., Bonavita, M., Chiara, G. & et al. (2020). The ERA5 global reanalysis. Quarterly Journal of the Royal Meteorological Society, 146(730), 1999-2049. http://dx.doi.org/10.1002/qj.3803
-
+The answers are found in section below. But only peak if you are stuck.
 
 # Extra: handling irregular data {#sec-narwhal-reg}
 
@@ -839,3 +834,62 @@ mute <- mapply(function(data, col) {
 ```
 
 Notice how in some areas the different simulations have generally good agreement in the likely location during gaps, while in others they diverge. Multiple imputation can be particularly powerful if we want to incorporate environmental variables, as spatially explicit variables can be extracted for each simulated track to sample the most likely conditions encountered by the animal.
+
+# Code for polar bear data exercise
+
+Q1. Fit a simple two-state HMMs.
+
+Before we can do anything, we need to prepare the data. Here for a simple HMM without any covariate, we would only need to do the following.
+
+```{r prepData_pb, attr.source = ".numberLines"}
+pb_data <- prepData(pb, type = "LL")
+head(pb_data)
+```
+
+To be able to find the starting values of our model, let's visualize our data.
+
+```{r vis_pb, attr.source = ".numberLines"}
+par(mfrow= c(1, 2))
+hist(pb_data$step, breaks=50, 
+     main = "", xlab = "step length (m)")
+hist(pb_data$angle, breaks=50, 
+     main = "", xlab = "turning angle")
+```
+
+There is plenty of presistence in turning angle (very high peak at 0) and though hard to exactly pick out there are maybe two different peaks in step length, somthing around 0.2 and 1.7.
+
+
+```{r vis_pb_2, attr.source = ".numberLines"}
+par(mfrow= c(1, 1))
+plot(pb_data$step ~ pb_data$time, ty = "l", ylab = "Step length",
+     xlab = "Date", las = 1)
+abline(h = 0.2, col = rgb(1, 0, 0, 0.5))
+abline(h = 1.7, col = rgb(1, 0, 0, 0.5))
+```
+
+Let's set up the arguments for the `fitHMM` function. Here we are using the same distributions as for the narwhals, but use starting values for the parameter informed by the data visualization.
+
+```{r set_up_mod_pb, attr.source = ".numberLines"}
+# Number of states
+nbState_pb  <- 2
+# Distribution for each data stream
+dist_pb <- list(step = "gamma", angle = "vm") 
+# Starting values
+mu0_pb <- c(0.2, 1.7) # Mean step length 
+sigma0_pb <- mu0_pb/2
+kappa0_pb <- c(0.1, 2)
+# Combined
+par0_pb <- list(step = c(mu0_pb, sigma0_pb), angle=kappa0_pb)
+```
+
+Let's fit the model with retry fit, so as to explore a few different starting values.
+
+```{r pb_HMM_2states, attr.source = ".numberLines"}
+mod_pb_2state <- fitHMM(pb_data, 
+                        nbState = nbState_pb,
+                        dist = dist_pb,
+                        Par0 = par0_pb,
+                        retryFits = 10)
+```
+
+Q2. 
