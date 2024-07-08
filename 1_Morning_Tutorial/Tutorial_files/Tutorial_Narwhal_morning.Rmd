@@ -24,8 +24,7 @@ pre.numberSource code
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-# Tutorial goals and set up
-
+# Tutorial goals
 
 The goal of this tutorial is to explore how to fit hidden Markov models
 (HMMs) to movement data. To do so, we will use the R package `momentuHMM`, 
@@ -48,7 +47,7 @@ The primary learning objectives in this first tutorial are to:
 4. Incorporating and interpreting covariates on behaviour transition probabilities
 5. Incorporating covariates in the observation model
 
-## Setup
+# Setup
 
 First, let's load the packages that we will need to complete the analyses. 
 Of course you need to have them installed first.
@@ -60,7 +59,6 @@ library(dplyr)      # data management
 library(tidyr)      # data management
 library(terra)
 library(tidyterra)
-library(ggOceanMaps)# plot the data
 library(ggplot2)    # plot the data
 library(ggspatial)  # plot the data
 library(lubridate)  # transform numeric vectors to POSIXct objects.
@@ -69,7 +67,7 @@ library(kableExtra) # produce visually appealing tables
 library(geosphere)  # Needed to calculate step lengths from lat/lon locations - just need it installed
 ```
 
-While the `raster` package is being phased out in favour of the new `terra` package, `momentuHMM` still relies on the `raster` package to extract covariates. Therefore, for this tutorial we will still use `raster`, but we also use `terra` at times as it is most up-to-date.
+While the `raster` package is being phased out in favour of the new `terra` package, `momentuHMM` still relies on the `raster` package to extract covariates. Therefore, for this tutorial we will still use `raster`, but we also use `terra` at times as it is most up-to-date package for rasters.
 
 Make sure to set working directory to "ISEC2024_HMM_workshop" of the HMM workshop folder:
 
@@ -82,24 +80,23 @@ We will need the functions in the following file `utility_functions.R`
 source("utility_functions.R")
 ```
 
-# Import data with description and processing
+# Import data (with description and simple processing)
 
 HMMs assume that locations are taken at regular time steps and that there is negligible position error. 
-For example, HMMs are adequate to use on GPS tags that take
-locations at a set temporal frequency (e.g., every $2$ hrs). Without
-reprocessing, HMMs are not suitable for irregular times series
+For example, HMMs are adequate to use on data collected from tags that take
+GPS locations at a set temporal frequency (e.g., every $2$ hrs). Without
+reprocessing, simple HMMs are not suitable for irregular times series
 of locations or locations with large measurement error (e.g., you would
-need to preprocess Argos data before applying HMMs).
+need to preprocess Argos data before applying the type of HMMs presented in this tutorial).
 
 The dataset we will work with includes the movement tracks of three narwhals tagged with Fastlock GPS tags. 
 The dataset was provided by Dr. Marianne Marcoux (Fisheries and Oceans, Canada). 
 For simplicity, we only examine the GPS data from two weeks in August 2017. 
 
 As is the case for the data of many aquatic species,
-the raw narwhal Fastlock GPS data is at collected irregular time intervals (the time of locations is dictated partly with when they surface). 
+the raw narwhal Fastlock GPS data is collected at irregular time intervals (the time of locations is dictated partly with when they surface). 
 To simplify the tutorial, we have already regularized the tracks. 
-Specifically, we have split tracks with data gaps of more 1 hr into a subset of tracks, and have interpolating the locations at a 10 min interval using a continuous-time correlated random walk using the `momentuHMM` `crawlWrap` function. See section \@ref(sec-narwhal-reg) below.
-
+Specifically, we have split tracks with data gaps of more 1 hr into a subset of tracks, and have interpolating the locations at a 10 min interval using a continuous-time correlated random walk using the `momentuHMM` `crawlWrap` function. If interested in these pre-processing steps and decisions, wee section \@ref(sec-narwhal-reg) below.
 
 Let's import the regularized narwhal movement data and convert the time column to an appropriate date format.
 
@@ -122,56 +119,54 @@ For some of the visualization, it's helpful to use a spatial object, and so we t
 tracks_gps_sf <- tracks_gps %>% st_as_sf(coords = c("x", "y")) %>% st_set_crs(4326)
 ```
 
-We will plot the tracks with the package `ggOceanMaps` that will show the tracks on the map of the Earth, with limits set in Longitude and Latitude of our data (`bbox`below). This package is convenient since it deals with Longitude and Latitude, and there is no need to transform our dataset into an `sf` object. In the `crs` argument, we define the coordinate reference system of the original data (in this case WGS84, which is defined by the EPSG code `4326`).
+As we will see later we will also use bathymetry data as a spatial covariate. Let's import it here.
+
+The raw bathymetry data used to create this raster was taken from the the GEBCO global ocean and land terrain model from https://pressbooks.bccampus.ca/ewemodel/chapter/getting-bathymetry/.
+
+```{r import_bathy, attr.source = ".numberLines"}
+bathy <- raster("data/bathy_4_narwhals.tiff")
+```
+
+Note that land values of the bathymetry layer are 0s.
+
+To get a reference of where these narwhals are swimming, let's also import a land layer.
+
+```{r import_land, attr.source = ".numberLines"}
+land <- st_read("data/NorthBaffin.shp")
+```
+
+Let's plot the narwhal movement data over the bathymetry and land layers.
 
 ```{r plot_gps_data, warning=FALSE, attr.source = ".numberLines"}
-# Define the geographical limits (box) of the background map: c(min_lon,max_lon,min_lat,max_lat)
-bbox <-c(min(tracks_gps$x), max(tracks_gps$x),
-         min(tracks_gps$y), max(tracks_gps$y))
-
-#Plot the data, with background map
-basemap(limits = c(bbox), bathymetry = TRUE) + 
+ggplot() +
+  geom_spatraster(data=rast(bathy)) +
+  geom_sf(data=land, fill="beige") +
   geom_spatial_path(data = tracks_gps, 
-                    aes(x = x, y = y, colour=factor(ID)), crs = 4326) +
-  ggtitle("Movement data of the narwhals")
+                    aes(x = x, y = y, colour=factor(ID)), crs = 4326) 
+
 ```
 
 We can see that even though its the data for only 3 narwhals, that there are more than 3 tracks. 
 These represent the split tracks we created every time we had a data gap longer than 1 hr.
 
-# Covariates and data streams
+# Create data streams and process covariates
 
 Next, we need to derive our data streams (step lengths and turning angles) and covariates. 
-Later in our tutorial, our first covariate we will be time of day, so we will derive this covariate now.
+One covariate we will explore will be time of day, so we will derive this covariate now.
 
 ```{r prep, attr.source = ".numberLines"}
 # calculate time of day variable (for later use)
 tracks_gps$tod <- hour(tracks_gps$time) + minute(tracks_gps$time) / 60
 ```
 
-Another covariate we will explore is bathymetry. Let's load the raster. The raw bathymetry data used to create this raster was taken from the the GEBCO global ocean and land terrain model from https://pressbooks.bccampus.ca/ewemodel/chapter/getting-bathymetry/.
-
-```{r load_bathy, attr.source = ".numberLines"}
-bathy <- raster("data/bathy_4_narwhals.tiff")
-```
-
-Let's plot it.
-
-```{r}
-ggplot() +
-  geom_spatraster(data=rast(bathy)) +
-  geom_spatial_path(data = tracks_gps, 
-                    aes(x = x, y = y, colour=factor(ID)), crs = 4326) 
-```
-
 Now, we will get our observation variables using the `prepData` function. 
 
-The default is UTM, but here we use Lat Lon, so we specify "LL" in `type`. 
+The default is UTM, but here the narwhal location data is in Latitude and Longitude, so we specify "LL" in `type`. 
 
 The argument `covNames` will distinguish our model covariates from data streams. 
 If there are missing covariate values, the default is to fill the missing value with the nearest value. This can be reasonable for spatial covariates, but wouldn't be sensible for a covariate such as time of day. We have no missing covariate values, so it's not a concern, but this is something to be aware of when using `prepData`. 
 
-Importantly, we will extract the bathymetry values at the location using the argument `spatialCovs`.
+As mentioned above, we will also explore using bathymetry as a covariate. Thus, we will extract the bathymetry values at the location using the argument `spatialCovs`.
 
 ```{r prep2, attr.source = ".numberLines"}
 # calculate step length and turning angles
@@ -181,10 +176,11 @@ data <- prepData(tracks_gps, type = "LL", covNames = "tod", spatialCovs = list(b
 head(data)
 ```
 
-
-It is now possible to now to fit an HMM on this dataset and next we will explore this in the R package `momentuHMM`.
+We can see that `prepData` has calculated the step length and the turning angle, and has extracted the bathymetry value at each location.  
 
 # Fit HMM to data 
+
+It is now possible to now to fit an HMM on this dataset and next we will explore this in the R package `momentuHMM`.
 
 The primary learning objectives of this part are:
 
@@ -211,10 +207,12 @@ The gamma distribution is strictly positive (i.e., it does not allow for $0$s). 
 Here, we will start simple and we will not use covariates. 
 
 4. We need to select initial values for the parameters to estimate. The HMMs are fit using maximum likelihood estimate (MLE) with a numerical optimizer. An unfortunate aspect of fitting models using numerical optimizers, is that, to be able to explore the parameter space and find the best parameter values for the model, the optimizer needs to start somewhere. 
-You need to decide where it starts. Unfortunately, choosing bad starting values can result in parameter estimates that are not the MLE, but just a local maximum. To choose your initial parameter you can take a quick peak at the data (e.g., using the plots below) and use some general biological information. For example, it’s common for animals to have one behaviour with long step lengths and small turning angles and one behaviour with short step lengths and larger turning angles. From the plots below (note that we can simply use plot on our data), it looks like the animal has step lengths that are close to $0.1$ and $0.6$ km. There could be a third behaviour with larger step lengths. But for now we will consider only two.
+You need to decide where it starts. Unfortunately, choosing bad starting values can result in parameter estimates that are not the MLE, but just a local maximum. To choose your initial parameter you can take a quick peak at the data (e.g., using the plots below) and use some general biological information. For example, it’s common for animals to have one behaviour with long step lengths and small turning angles and one behaviour with short step lengths and larger turning angles. 
+From the plots below, it looks like the animal has many step lengths that are close to $0.1$ and $0.6$ km. There could be a third behaviour with larger step lengths. But for now we will consider only two.
 
 Note, by default, `fitHMM` will set the argument `estAngleMean` to NULL, which means that we assume that the mean angle is $0$ for both behaviours (i.e., the animal has a tendency to continue in the same direction) and that only the angle concentration parameters differ. 
-The concentration parameters control the extent to which the animal continues forward versus turn. Doing so reduces the number of parameters to estimate. These are all very important decisions that you must make when you construct your model.
+The concentration parameters control the extent to which the animal continues forward versus turn. Doing so reduces the number of parameters to estimate. 
+These are all very important decisions that you must make when you construct your model.
 It's useful to visualise your data in order to choose initial parameters.
 
 ```{r inits, warning=FALSE, attr.source = ".numberLines", fig.width = 10, fig.height = 4}
@@ -236,8 +234,8 @@ abline(h = 0.6, col = rgb(1, 0, 0, 0.5))
 
 Based on visual examination of the data, we might choose our initial parameters to be $0.1$ and $0.6$ for the mean step lengths and use half those values for the standard deviations. 
 The turning angles are either very close to $0$ or pretty spread from $-\pi/2$ to $\pi/2$. High concentration parameter values ($\kappa$, said kappa) mean that the animal has a tendency to move in the same direction. 
-Values close to 0 mean that the turning angle distribution is almost uniform (the animal turns in all directions). Note that $\kappa$
-cannot be exactly 0, so let’s choose 0.1 and 1.
+Values close to 0 mean that the turning angle distribution is almost uniform (the animal turns in all directions). 
+Note that $\kappa$ cannot be exactly 0, so let’s choose 0.1 and 1.
 
 ```{r inits3, message=FALSE, attr.source = ".numberLines", cache=TRUE}
 # define states (optional)
@@ -270,8 +268,10 @@ mod <- fitHMM(data,
 mod
 ```
 
-We can also use the `plot` function to plot the outputs. The most interesting output is usually the state-dependent distributions (i.e., the estimated distributions of step lengths and turning angles in each state). 
-Note that setting `plotTracks = TRUE` will plot maps of each track segment, colored based on the estimated state.
+We can also use the `plot` function to plot the outputs. 
+The most interesting output is usually the state-dependent distributions (i.e., the estimated distributions of step lengths and turning angles in each state). 
+Note that setting `plotTracks = TRUE` will plot maps of each track segment, colored based on the estimated state. 
+We will set it to `FALSE` and show a more integrative way to plot these below.
 
 ```{r plotHMM, message=FALSE, attr.source = ".numberLines", cache=TRUE}
 # plot state-dependent distributions
@@ -282,7 +282,7 @@ Based on the mean step length parameters, it looks like the first behavioural st
 This is particularly easy to see in the step histogram (first figure), where the estimated distribution for each state is overlaid on top of the observed step length frequencies. 
 The turning angle distributions of second state (travel) indicates much more directed movement, with higher angular concentration.
 
-## Identifying Behavioural States
+## Identifying behavioural states
 
 We are interested in identifying when an animal is in each of the behavioural states (i.e., when the animal is in state 1 vs state 2), something we call state decoding. 
 We can use the function `viterbi`, which uses the Viterbi algorithm to produce the most likely sequence of states according to your fit model and data.
@@ -299,6 +299,8 @@ head(dec_states, 20)
 # How many locations in each state do we have?
 table(dec_states)
 ```
+
+This kind of information (number of locations in each states), can be used to get a behavioural budget for example. Here looking like that spend 50% of their time in each behavioural state.
 
 In many cases, it is more interesting to get the probability of being in each state rather than the most likely state. To do so, you can use the function `stateProbs`, which returns a matrix of the probability of being in each state for each time step (this is known as local decoding).
 
@@ -320,24 +322,22 @@ data$state_p1 <- statep[,1]
 
 # Plot tracks, coloured by viterbi states
 ggplot(data, aes(x, y, col = viterbi_state, group = ID)) +
-    geom_point(size = 0.5) + geom_path() +
-    coord_equal() +
+  geom_point(size = 0.5) + geom_path() +
   scale_color_manual(values = c("#E69F00", "#56B4E9"))
 
 # Plot tracks, coloured by state probabilities
 ggplot(data, aes(x, y, group = ID, col = state_p1)) +
   geom_point(size = 0.5) + geom_path() + 
-  coord_equal() +
   scale_color_continuous(high = "#E69F00", low = "#56B4E9")
 
 ```
 
 You can see that there is general agreement with the global (Viterbi) and local decoding, indicating that there is generally a high state probabilty and we have high confidence in our state classification.
 
-## Checking the Stability of the Parameter Estimates
+## Checking the stability of the parameter estimates
 
-The first thing we need to look into is whether the parameter estimates are reliable (i.e., if we are finding the global maximum). 
-As mentioned above, the initial parameter values can affect the estimating procedures. So it’s always good to check if you get similar results with different starting values. Here, we will make the starting values of the two behavioural states closer to one another.
+As mentioned above, the initial parameter values can affect the estimating procedures. Thus, it's important to assess whether the parameter estimates are sensitive to the starting values we used (i.e., checking that we are not clearly at a local maximum). 
+To do so, we check if we get similar results with different starting values. Here, we will make the starting values of the two behavioural states closer to one another.
 
 ```{r inits_check, message=FALSE, attr.source = ".numberLines", cache=TRUE}
 
@@ -363,6 +363,7 @@ Let’s compare the two results. First let’s look at which of the two has the 
 
 # Negative log likelihood
 c(original = mod$mod$minimum, new = mod2$mod$minimum)
+mod$mod$minimum - mod2$mod$minimum
 
 # Parameter estimates
 list(original = mod$mle$step, new = mod2$mle$step)
@@ -372,12 +373,13 @@ list(original = mod$mle$angle, new = mod2$mle$angle)
 list(original = mod$mle$gamma, new = mod2$mle$gamma)
 ``` 
 
-Looks like they both returned the same estimates for everything. So that’s good! The function `fitHMM` also has the argument `retryFits` which perturbs the parameter estimates and retries fitting the model. Since the optimization of HMMs depend on the starting values chosen, it is always good to explore multiple initial values and then choose the best estimates among them (which is done by `retryFits`). The argument is used to indicate the number of times you want perturb the parameters and retry fitting the model (you can choose the size of the perturbation by setting the argument `retrySD)`.
+Looks like they both returned very similar estimates for everything, though the negative log likelihood of the second set of starting values is slightly better. 
+
+The function `fitHMM` also has the argument `retryFits` which perturbs the parameter estimates and retries fitting the model. Since the optimization of HMMs depend on the starting values chosen, it is always good to explore multiple initial values and then choose the best estimates among them (which is done by `retryFits`). The argument is used to indicate the number of times you want perturb the parameters and retry fitting the model (you can choose the size of the perturbation by setting the argument `retrySD)`.
 
 Let’s try (this will take a few minutes).
 
 ```{r retryfits, message=FALSE, attr.source = ".numberLines", cache=TRUE}
-
 # Fit the same 2-state HMM with retryFits
 # This is a random pertubation, so setting the seed to get the same results
 set.seed(29)
@@ -385,7 +387,7 @@ mod_RF <- fitHMM(data,
                  nbState = 2,
                  dist=list(step="gamma", angle="vm"),
                  Par0 = Par0,
-                 retryFits=10)
+                 retryFits = 20)
 ``` 
 
 Let’s compare the results again.
@@ -395,9 +397,11 @@ Let’s compare the results again.
 c(original = mod$mod$minimum, new = mod2$mod$minimum,
   retryFits = mod_RF$mod$minimum)
 
+mod_RF$mod$minimum - mod2$mod$minimum
+
 ``` 
 
-The maximum likelihood was the same in every perturbation, indicating that the optimiser converged to the same estimates.
+The maximum likelihood is again almost identical in every perturbation. However, the model second set of starting values is still slightly better (lower negative log likelihood), and would be the set of starting values to use moving forward.
 
 `momentuHMM` has functions to help selecting initial parameters for complex models, which we will demonstrate later in the tutorial.
 
@@ -405,10 +409,12 @@ The maximum likelihood was the same in every perturbation, indicating that the o
 
 We fitted a model to the data and it looks like the parameter estimates are reliable, but is this a good model for our data? 
 Can we use the model results? 
-The best way to investigate model fit is through pseudo-residuals. Pseudo-residuals are a type of model residuals that account for the interdependence of observations. They are calculated for each of the time series (e.g., you will have pseudo-residuals for the step length time series and for the turning angle time series). If the model fit is appropriate, the pseudo-residuals produced by the functions `pseudoRes` should follow a standard normal distribution. You can look at pseudo-residuals directly via the function `plotPR`, which plots the pseudo-residual times-series, the qq-plots, and the autocorrelation functions (ACF).
+The best way to investigate model fit is through pseudo-residuals. 
+Pseudo-residuals are a type of model residuals that account for the interdependence of observations. 
+They are calculated for each of the time series (e.g., you will have pseudo-residuals for the step length time series and for the turning angle time series). If the model fit is appropriate, the pseudo-residuals produced by the functions `pseudoRes` should follow a standard normal distribution. You can look at pseudo-residuals directly via the function `plotPR`, which plots the pseudo-residual times-series, the qq-plots, and the autocorrelation functions (ACF).
 
 ```{r plotpr, message=FALSE, attr.source = ".numberLines", cache=TRUE}
-plotPR(mod)
+plotPR(mod2)
 ``` 
 
 The ACF plot indicate that the model does not fit the step length time series particularly well. The ACF indicates that there is considerable autocorrelation remaining in the time series, even after accounting for the persistence in the underlying behavioural states.
@@ -439,11 +445,14 @@ We can look at the pseudo residuals for the 3 state model:
 plotPR(mod_3state)
 ``` 
 
-It's better. Not perfect, but less unexplained autocorrelation, especially in the step lengths. If we look at the step length distribution, we can see that we have still our state with really small steps (maybe resting?), a state with steps of medium size (maybe foraging?), and a state with large steps (maybe travelling?). As shown above, looking at the tracks can help better inspect the nature of the states.
+It's better. Not perfect, but less unexplained autocorrelation, especially in the step lengths. 
+If we look at the step length distribution, we can see that we have still our state with really small steps (maybe resting?), a state with steps of medium size (maybe foraging?), and a state with large steps (maybe travelling?).
+As shown above, looking at the tracks can help better inspect the nature of the states.
 
 # Adding covariates to the model
 
-We can add covariates to our HMM to better understand drivers of behaviour. We can either include covariates on the transition probabilities (i.e., the state process) or in the state-dependent distributions (i.e., the observation process). Respectively, these answer the questions: 
+We can add covariates to our HMM to better understand drivers of behaviour. 
+We can either include covariates on the transition probabilities (i.e., the state process) or in the state-dependent distributions (i.e., the observation process). Respectively, these answer the questions: 
 
   * Does a covariate have an effect on the probability of switching between states?
   
@@ -460,29 +469,20 @@ $$\eta_{ij}^{(t)} = \begin{cases}
 	\beta^{(ij)}_0 + \sum_{p=1}^{P} \beta_p^{(ij)} \omega_p^{(t)} & \text{if } i \neq j \\
 	0 & \text{otherwise.}
 	\end{cases} $$
-For each transition probability, $\beta_0^{(ij)}$ is an intercept parameter, and $\beta_p^{(ij)}$ measures the effect of the $p$-th covariate $\omega_p$. 
+For each transition probability, $\beta_0^{(ij)}$ is an intercept parameter, and $\beta_p^{(ij)}$ measures the effect of the $p$-th covariate $\omega_p$.
 
-Here, we will assess if transition probabilities vary as a function of time of day, and we will use a 2-state model for demonstration. The first step is to define our model formula. 
-Since time of day is a cyclic covariate, we must define a relationship that ensures that the transition probabilities are similar at the very end and very beginning of the day. 
-We can do this by specify the transition probabilities as a trigonometric (i.e., cyclic) function of time of day (defined as $\tau$),
+Here, we will will create a model where transition probabilities vary as a function of the bathymetry (i.e., depth of the ocean). Thus $omega_1$ is the bathymetry value associated with that step and we can simply specify with a formula like the one used in simple linear models. 
 
-$$\eta_{ij}^{(t)} = \begin{cases}
-\beta^{(ij)}_0 + \beta_1^{(ij)} \cos \left(\frac{2 \pi \tau_t}{24}\right) +  \beta_2^{(ij)} \sin \left(\frac{2 \pi \tau_t}{24}\right) & \text{if } i \neq j \\
-0 & \text{otherwise} 
-	\end{cases} ,$$
-where 24 refers for the 24 hour period of interest. This relationhip can conveniently be specified with the `cosinor` function. 
-
-```{r set_tpm_formula, message = FALSE, cache = TRUE, attr.source = ".numberLines"}
-# set new formula
-formula <- ~cosinor(tod, period = 24)
+```{r formula_bathy, cache = TRUE, attr.source = ".numberLines"}
+formula_bathy <- ~bathy
 ```
 
-Next, we need to specify initial parameters and we will use the function `getPar0` to do so. This will use the estimated parameters of a previously fitted 2-state model with no covariates. 
+To be able to fit the HMM, we need to specify initial parameters and we will use the function `getPar0` to do so. This will use the estimated parameters of a previously fitted 2-state model with no covariates. 
 Note that it will set the unknown linear predictor parameters to 0, and use the intercept of the previous model. 
 
 ```{r tpm_par0, message = FALSE, cache = TRUE, attr.source = ".numberLines"}
 # set tpm formula and extract initial values from simpler model
-Par0_4 <- getPar0(model = mod, formula = formula)
+Par0_4 <- getPar0(model = mod2, formula = formula_bathy)
 Par0_4
 ```
 
@@ -491,32 +491,50 @@ Then we can fit the model. The `formula` argument defines the model formula for 
 ```{r fit_tpm, message = FALSE, cache = TRUE, attr.source = ".numberLines"}
 # fit model
 mod_tpm <- fitHMM(data,
-                    nbStates=2,
-                    dist=dist,
-                    Par0=Par0_4$Par,
-                    beta0=Par0_4$beta,
-                    formula=formula)
+                  nbStates = 2,
+                  stateNames = stateNames, 
+                  dist = dist,
+                  Par0 = Par0_4$Par,
+                  beta0 = Par0_4$beta,
+                  formula = formula_bathy)
 mod_tpm$mle$beta
 ```
 
-There are several ways to visualise the relationship. If you use the standard `plot()` function on the fitted HMM, you can visualise the transition probabilities directly. Another option is to plot the stationary state probabilities, which represent how likely the animal is to be in each behaviour at each time of day.
+There are several ways to visualise the relationship. If you use the standard `plot()` function on the fitted HMM, you can visualise the transition probabilities directly. Another option is to plot the stationary state probabilities, which represent how likely the animal is to be in each behaviour as a function of the bathymetry.
 
 ```{r, attr.source = ".numberLines"}
 plotStationary(mod_tpm, plotCI = TRUE)
 ```
 
+Here it looks like the "resident" behaviour is less common than the "travelling" behaviour at shallower depth  (e.g., bathy close to 0).
+
 ## Covariates in the observation model
 
-This section will illustrate how to model mean step length as a function of time of day. Any parameter in the observation model (e.g., mean/sd of the step lengths, or turning angle parameters) can be modelled as a function of a covariate,  which allows for the movement behaviour within each discrete state to vary. Here, we will use the same trigonometric function described in the previous section to model mean step length based on the time of day. To do so, we specify `DM`, which will be a list of formulas for the step length (and possibly other) parameters. 
-For simplicity, we will only model the mean, but it is common to also model the standard deviation with the same relationship. 
+This section will illustrate how to model mean step length as a function of a  covariate. 
+Any parameter in the observation model (e.g., mean or sd of the step lengths, or turning angle parameters) can be modelled as a function of a covariate, which allows for the movement behaviour within each discrete state to vary. 
+
+Here, we will model mean step length based on the time of day.
+Since time of day is a cyclic covariate, we must define a relationship that ensures that the mean step length are similar at the very end and very beginning of the day. 
+We can do this by specify the mean step length as a trigonometric (i.e., cyclic) function of time of day (defined as $\tau$),
+
+$$\mu_{i}^{(t)} = \alpha^{(i)}_0 + \alpha_1^{(i)} \cos \left(\frac{2 \pi \tau_t}{24}\right) +  \alpha_2^{(i)} \sin \left(\frac{2 \pi \tau_t}{24}\right) $$
+where 24 refers for the 24 hour period of interest. This relationhip can conveniently be specified with the `cosinor` function. 
+
+```{r sformual_tod, message = FALSE, cache = TRUE, attr.source = ".numberLines"}
+# set new formula
+formula_tod <- ~cosinor(tod, period = 24)
+```
+
+To do link the formula to the mean step length, we specify `DM`, which will be a list of formulas for the step length (and possibly other) parameters. 
+For simplicity, we will only model the mean, but we could also model the standard deviation with the same relationship. 
 We can derive the initial parameters using the `getPar0` function, as described in the previous section.
 
 ```{r, message=FALSE, cache=FALSE, attr.source = ".numberLines"}
 # define step formula and design matrix
-DM <- list(step = list(mean = formula, sd = ~1))
+DM <- list(step = list(mean = formula_tod, sd = ~1))
 
 # extract initial values from simpler 2-state model with no covariates
-Par0_5 <- getPar0(model = mod, DM = DM)
+Par0_5 <- getPar0(model = mod2, DM = DM)
 ```
 
 Now we can fit the HMM with covariate-dependent observation parameters. 
@@ -524,11 +542,12 @@ Now we can fit the HMM with covariate-dependent observation parameters.
 ```{r, cache = TRUE, message = FALSE, attr.source = ".numberLines"}
 # fit model
 mod_obs <- fitHMM(data, 
-                    nbStates = 2, 
-                    dist = dist, 
-                    Par0 = Par0_5$Par,
-                    beta0 = Par0_5$beta, 
-                    DM = DM)
+                  nbStates = 2, 
+                  stateNames = stateNames, 
+                  dist = dist, 
+                  Par0 = Par0_5$Par,
+                  beta0 = Par0_5$beta, 
+                  DM = DM)
 mod_obs
 ```
 
@@ -538,9 +557,9 @@ The regression coefficients are difficult to interpret for a cyclic function, bu
 plot(mod_obs, ask = FALSE, plotCI = TRUE, plotTracks = FALSE)
 ```
 
-This shows that the mean step within each state varies based on time of day, with higher step lengths in the morning. State 1 has a mean ranging from roughly 280-300m and state 2 ranges from roughly 600-900m. 
+This shows that the mean step within each state varies based on time of day, with higher step lengths in the morning. State 1 has a mean ranging from roughly 280-300 m (0.28-0.30 km) and state 2 ranges from roughly 600-900m (0.6-0.9 km). 
 
-As the observation data is the same between these models and the models above, we can use AIC to compare models with and without time of day effects.
+As the observation data (i.e., the data stream: step lengths and turning angles) are the same between these models and the models above, we can use AIC to compare models with and without time of day effects.
 
 ```{r AIC_htides_HMMs, attr.source = ".numberLines", collapse=TRUE}
 AIC(mod)  # without time of day
@@ -550,31 +569,46 @@ AIC(mod_obs)  # time of day effect on observation parameters
 
 This indicates the the model with a time-varying mean step length is the best fitting model. 
 
+For all of these new models, we have not check the starting values nor their fit as tutorial time is limited. However, these checks should be done for all models fitted, and special care should be made to check the final selected model.
+
 # Exercise
 
-Here we will use polar bear GPS data of one adult female found here
-
+Here we will use polar bear GPS data of one adult female from:
 Derocher, Andrew, 2021, "Replication Data for: Togunov RR, Derocher AE, Lunn NJ, Auger-Méthé M. 2021. Characterising menotatic behaviours in movement data using hidden Markov models. Methods in Ecology and Evolution.", https://doi.org/10.7939/DVN/QYMAYV,
 
-Which is the dataset used in 
+Here we only extracted the locations data from this dataset. It's the data from one female polar bear from April 5, 2011 to May 5, 2011. The collar collected GPS data every 30 min, and the 8 missing locations were imputted using a continuous-time correlated random walk as shown below for the narwhals (section \@ref(sec-ctcrw)). More information can be found in: Togunov RR, Derocher AE, Lunn NJ, Auger-Méthé M. 2021. Characterising menotatic behaviours in movement data using hidden Markov models. Methods in Ecology and Evolution 12: 1984-1998. 
 
-The description is: Togunov RR, Derocher AE, Lunn NJ, Auger-Méthé M. 2021. Characterising menotatic behaviours in movement data using hidden Markov models. Methods in Ecology and Evolution. 
-
-time: Date of GPS location obtained by telemetry collar. YYYY-MM-DD hh:mm 
-x: X coordinate Degrees longitude
-y: Y coordinate Degrees latitude 
-u10: ‘u’ (west to east) component of wind at 10m elevation2 m/s 
-v10: ‘v’ (south to north) component of wind at 10m elevation2 m/s 
-
-The locations are unprojected in WGS84 (EPSG:4326), while the wind estimates are bilinearly interpolated from ECMWF’s ERA5 reanalysis: Hersbach, H., Bell, B., Berrisford, P., Hirahara, S., Hora_nyi, A., Mun~oz-Sabater, J., Nicolas, J., Peubey, C., Radu, R., Schepers, D., Simmons, A., Soci, C., Abdalla, S., Abellan, X., Balsamo, G., Bechtold, P., Biavati, G., Bidlot, J., Bonavita, M., Chiara, G. & et al. (2020). The ERA5 global reanalysis. Quarterly Journal of the Royal Meteorological Society, 146(730), 1999-2049. http://dx.doi.org/10.1002/qj.3803
+Let's read the data and convert the time to a time format.
 
 ```{r import_pb_data, attr.source = ".numberLines"}
-pb <- read.csv("data/WH_X33406_location_data-1.csv")
+pb <- read.csv("data/pb_track.csv") %>%
+  mutate(time = ymd_hm(time))
 ```
 
 ```{r}
 head(pb)
 ```
+
+The column time is the date and time at which the GPS location was obtained by telemetry collar, while coordinates are in degrees longitude and latitude (Unprojected locations in WGS84 (EPSG:4326). 
+Do the following questions.
+
+**Q1. Fit a simple two-state HMMs.**
+
+**Q2. Look at the state-dependent distribution and describe the movement characteristics associated with each behavioural states.**
+
+**Q3. Identify what proportion of time is spent in each behaviour.**
+
+**Q4. Plot the track with the decoded behavioural state.**
+
+**Q5. Look at the pseudo residuals of the model. Do they indicate any issues with the model?**
+
+**Q6. Assess whether including time of day as a covariate in the transition probabilities improve the model fit. Interpret the results.**
+
+**Q7. Check if using time of day changes the pseudo-residuals.**
+
+**Q8. What modification(s) could be done to improve the model?**
+
+The answers are found in section \@ref(sec-res-pb) below. But only peak if you are stuck, instead look at the narwhal code.
 
 # Extra: handling irregular data {#sec-narwhal-reg}
 
@@ -601,18 +635,16 @@ tracks_gps_O <- tracks_gps_O %>%
          !(time == lag(time) & x == lag(x) & y == lag(y) & loc_class == lag(loc_class)))
 ```
 
-Now we will plot the tracks with a new package `ggOceanMaps` that will show the tracks on the map of the Earth, with limits set in Longitude and Latitude of our data (`bbox`below). This package is convenient since it deals with Longitude and Latitude, and there is no need to transform our dataset into an `sf` object. In the `crs` argument, we define the coordinate reference system of the original data (in this case WGS84, which is defined by the EPSG code `4326`).
+Let's plot the data over the bathymetry and land layers we have imported at the beginning of the tutorial.
+
 
 ```{r plot_gps_O_data, warning=FALSE, attr.source = ".numberLines"}
-# Define the geographical limits (box) of the background map: c(min_lon,max_lon,min_lat,max_lat)
-bbox <-c(min(tracks_gps_O$x), max(tracks_gps_O$x), 
-         min(tracks_gps_O$y), max(tracks_gps_O$y))
-
-# Plot the data, with background map
-basemap(limits = c(bbox), bathymetry = TRUE) + 
+ggplot() +
+  geom_spatraster(data=rast(bathy)) +
+  geom_sf(data=land, fill="beige") +
   geom_spatial_path(data = tracks_gps_O, 
-                    aes(x = x, y = y,colour=factor(ID)), crs = 4326)+
-  ggtitle("Movement data of the narwhals")
+                    aes(x = x, y = y, colour=factor(ID)), crs = 4326) 
+
 ```
 
 
@@ -706,7 +738,7 @@ data_split <- split_at_gap(data = tracks_gps_O,
 
 An alternative to this approach is to fill large gaps with NAs, but this can be problematic if there is any covariate-dependence on the transition probabilities. You can find some code further below, that handles missing data by setting the gaps to NAs, using the package `adehabitatLT`.
 
-## Interpolation (correlated random walk)
+## Interpolation (correlated random walk) {#sec-ctcrw}
 
 Once the track is split, there is often still irregularity within each segments, and we want to interpolate or predict new locations to form a regular grid of observations. 
 
@@ -817,3 +849,214 @@ mute <- mapply(function(data, col) {
 ```
 
 Notice how in some areas the different simulations have generally good agreement in the likely location during gaps, while in others they diverge. Multiple imputation can be particularly powerful if we want to incorporate environmental variables, as spatially explicit variables can be extracted for each simulated track to sample the most likely conditions encountered by the animal.
+
+# Code for polar bear data exercise {#sec-res-pb}
+
+## Q1. Fit a simple two-state HMMs.
+
+Before we can do anything, we need to prepare the data. Here for a simple HMM without any covariate, we would only need to do the following.
+
+```{r prepData_pb, attr.source = ".numberLines"}
+pb_data <- prepData(pb, type = "LL")
+head(pb_data)
+```
+
+To be able to find the starting values of our model, let's visualize our data.
+
+```{r vis_pb, attr.source = ".numberLines"}
+par(mfrow= c(1, 2))
+hist(pb_data$step, breaks=50, 
+     main = "", xlab = "step length (m)")
+hist(pb_data$angle, breaks=50, 
+     main = "", xlab = "turning angle")
+```
+
+There is plenty of persistence in turning angle (very high peak at 0) and though hard to exactly pick out there are maybe two different peaks in step length, somthing around 0.2 and 1.7.
+
+
+```{r vis_pb_2, attr.source = ".numberLines"}
+par(mfrow= c(1, 1))
+plot(pb_data$step ~ pb_data$time, ty = "l", ylab = "Step length",
+     xlab = "Date", las = 1)
+abline(h = 0.2, col = rgb(1, 0, 0, 0.5))
+abline(h = 1.7, col = rgb(1, 0, 0, 0.5))
+```
+
+Let's set up the arguments for the `fitHMM` function. Here we are using the same distributions as for the narwhals, but use starting values for the parameter informed by the data visualization.
+
+```{r set_up_mod_pb, attr.source = ".numberLines"}
+# Number of states
+nbState_pb  <- 2
+# Distribution for each data stream
+dist_pb <- list(step = "gamma", angle = "vm") 
+# Starting values
+mu0_pb <- c(0.2, 1.7) # Mean step length 
+sigma0_pb <- mu0_pb/2
+kappa0_pb <- c(0.1, 2)
+# Combined
+par0_pb <- list(step = c(mu0_pb, sigma0_pb), angle=kappa0_pb)
+```
+
+Let's fit the model with retry fit, so as to explore a few different starting values.
+
+```{r pb_HMM_2states, attr.source = ".numberLines"}
+mod_pb_2state <- fitHMM(pb_data, 
+                        nbState = nbState_pb,
+                        dist = dist_pb,
+                        Par0 = par0_pb,
+                        retryFits = 10)
+```
+
+## Q2. Look at the state-dependent distribution and describe the movement characteristics associated with each behavioural states.
+
+```{r plot_emission_pb, attr.source = ".numberLines"}
+plot(mod_pb_2state, ask = FALSE, plotTracks = FALSE)
+```
+
+State 1 is far more directed than state 2. The step length distribution attribute a clear peak for state 1 for small steps, while state 2 allow for a wide variation in step length.
+
+## Q3. Identify what proportion of time is spent in each behaviour.
+
+To do this, we need to first apply the Viterbi algorithm to get the most likely state sequencess.
+
+```{r viterbi_pb, attr.source = ".numberLines"}
+dec_state_pb <- viterbi(mod_pb_2state)
+head(dec_state_pb)
+```
+
+Let's count how many in each state, and divided by the length of the time series.
+
+```{r beh_budget_pb, attr.source = ".numberLines"}
+table(dec_state_pb)/length(dec_state_pb)
+```
+
+They spend more time in state 2 than in state 1.
+
+## Q4. Plot the track with the decoded  behavioural state
+
+```{r, attr.source = ".numberLines"}
+# add column for the viterbi sequence and state probabilities
+pb_data$viterbi_state <- factor(dec_state_pb)
+
+# Plot tracks, coloured by viterbi states
+ggplot(pb_data, aes(x, y, col = viterbi_state)) +
+  geom_point(size = 0.5) + geom_path() +
+  scale_color_manual(values = c("#E69F00", "#56B4E9"))
+```
+
+## Q5. Look at the pseudo residuals of the model. Do they indicate any issues with the model? 
+
+```{r pseudo_pb, attr.source = ".numberLines"}
+plotPR(mod_pb_2state)
+```
+
+We see that there is unexplained autocorrelation in the step length. It's worth looking at a model with more behavioural states of with additional covariates that may explain some of this correlation.
+
+## Q6. Assess whether including time of day as a covariate in the transition probabilities improve the model fit. Interpret the results.
+
+To be able to use time of day in the model, we will need to prepare the data again.
+
+```{r prepData_pb_tod, attr.source = ".numberLines"}
+pb$tod <- hour(pb$time) + minute(pb$time) /60
+pb_data <- prepData(pb, type = "LL", covNames = "tod")
+head(pb_data)
+```
+
+Now let's create the formula for time of day. 
+
+```{r formula_tod_pb, attr.source = ".numberLines"}
+formula_tod <- ~cosinor(tod, period = 24)
+```
+
+While this is the same formula as the one used for the narwhals, we will use it in the transition probability here, not as a covariate in the emission distributions.
+
+We need to get the starting values. To be able to do so, we will need to refit the base model with the new data.
+
+```{r par0_tod_pb, attr.source = ".numberLines"}
+mod_pb_2state_new <- fitHMM(pb_data, 
+                        nbState = nbState_pb,
+                        dist = dist_pb,
+                        Par0 = par0_pb)
+par0_pb_tod <- getPar0(model = mod_pb_2state_new, 
+                       formula = formula_tod)
+```
+
+Now let's fit the model where the transition probabilities are a function of time of day to change.
+
+```{r pb_tod_mod, attr.source = ".numberLines"}
+mod_tpm_pb <- fitHMM(pb_data,
+                  nbStates = nbState_pb,
+                  dist = dist_pb,
+                  Par0 = par0_pb_tod$Par,
+                  beta0 = par0_pb_tod$beta,
+                  formula = formula_tod)
+```
+
+Let's plot the stationary state probabilities.
+
+```{r, attr.source = ".numberLines"}
+plotStationary(mod_tpm_pb, plotCI = TRUE)
+```
+
+It looks like state 2 is more common early in the day than state 1.
+
+Is it better than the simple 2-states model?
+
+```{r, attr.source = ".numberLines"}
+AIC(mod_pb_2state)
+AIC(mod_tpm_pb)
+```
+
+Yes, it looks better.
+
+## Q7. Check if using time of day changes the pseudo-residuals.
+
+```{r, attr.source = ".numberLines"}
+plotPR(mod_tpm_pb)
+```
+
+There is still unexplained autocorrelation in the step length distribution. 
+
+## Q8. What modification(s) could be done to improve the model?
+
+Many modifications could be done! One example, could be to look at adding another state. 
+
+Here is the code to fit a 3-state HMMs with and without time of day as a covariate for the transition probabilities. We condensed the code a bit more here. Note that we assume that the 3 state is an intermediate state between states 1 and 2.
+
+
+```{r, attr.source = ".numberLines"}
+# Model without tod
+mod_pb_3state <- fitHMM(pb_data, 
+                        nbState = 3,
+                        dist = dist_pb,
+                        Par0 = list(step = c(c(0.2, 1, 1.8), # mean
+                                    c(0.1, 0.5, 0.9)), # sd
+                                    angle = c(0.1, 1.0, 2.0))) # kappa
+# Model with tod
+par0_pb_tod_3 <- getPar0(model = mod_pb_3state, 
+                       formula = formula_tod)
+mod_tpm_pb_3state <- fitHMM(pb_data,
+                  nbStates = 3,
+                  dist = dist_pb,
+                  Par0 = par0_pb_tod_3$Par,
+                  beta0 = par0_pb_tod_3$beta,
+                  formula = formula_tod)
+```
+
+Let's look at AIC.
+
+```{r, attr.source = ".numberLines"}
+AIC(mod_tpm_pb_3state, mod_pb_3state)
+```
+
+Note that AIC cannot be used to select the number of states. But if we compare the two models with 3 states, we see that the model with the time of day in transition probability matrix is better.
+
+Let's look at the pseudo residuals.
+
+```{r, attr.source = ".numberLines"}
+plotPR(mod_tpm_pb_3state)
+```
+
+The pseudo residuals look better (e.g., QQ plots) and the unexplained autocorrelation in steps is reduced but still problematic. 
+
+See Togunov et al. for a more complex HMM that fits the data better.
