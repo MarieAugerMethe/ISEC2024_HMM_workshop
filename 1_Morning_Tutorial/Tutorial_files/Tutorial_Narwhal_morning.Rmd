@@ -517,7 +517,7 @@ Here, we will model mean step length based on the time of day.
 Since time of day is a cyclic covariate, we must define a relationship that ensures that the mean step length are similar at the very end and very beginning of the day. 
 We can do this by specify the mean step length as a trigonometric (i.e., cyclic) function of time of day (defined as $\tau$),
 
-$$\mu_{i}^{(t)} = \beta^{(i)}_0 + \beta_1^{(i)} \cos \left(\frac{2 \pi \tau_t}{24}\right) +  \beta_2^{(i)} \sin \left(\frac{2 \pi \tau_t}{24}\right) $$
+$$\mu_{i}^{(t)} = \alpha^{(i)}_0 + \alpha_1^{(i)} \cos \left(\frac{2 \pi \tau_t}{24}\right) +  \alpha_2^{(i)} \sin \left(\frac{2 \pi \tau_t}{24}\right) $$
 where 24 refers for the 24 hour period of interest. This relationhip can conveniently be specified with the `cosinor` function. 
 
 ```{r sformual_tod, message = FALSE, cache = TRUE, attr.source = ".numberLines"}
@@ -573,14 +573,24 @@ For all of these new models, we have not check the starting values nor their fit
 
 # Exercise
 
-Here we will use polar bear GPS data of one adult female found here
-
+Here we will use polar bear GPS data of one adult female from:
 Derocher, Andrew, 2021, "Replication Data for: Togunov RR, Derocher AE, Lunn NJ, Auger-Méthé M. 2021. Characterising menotatic behaviours in movement data using hidden Markov models. Methods in Ecology and Evolution.", https://doi.org/10.7939/DVN/QYMAYV,
 
-Which is the dataset used in 
+Here we only extracted the locations data from this dataset. It's the data from one female polar bear from April 5, 2011 to May 5, 2011. The collar collected GPS data every 30 min, and the 8 missing locations were imputted using a continuous-time correlated random walk as shown below for the narwhals (section \@ref(sec-ctcrw)). More information can be found in: Togunov RR, Derocher AE, Lunn NJ, Auger-Méthé M. 2021. Characterising menotatic behaviours in movement data using hidden Markov models. Methods in Ecology and Evolution 12: 1984-1998. 
 
-The description is: Togunov RR, Derocher AE, Lunn NJ, Auger-Méthé M. 2021. Characterising menotatic behaviours in movement data using hidden Markov models. Methods in Ecology and Evolution. 
+Let's read the data and convert the time to a time format.
 
+```{r import_pb_data, attr.source = ".numberLines"}
+pb <- read.csv("data/pb_track.csv") %>%
+  mutate(time = ymd_hm(time))
+```
+
+```{r}
+head(pb)
+```
+
+
+We only kept the location data
 time: Date of GPS location obtained by telemetry collar. YYYY-MM-DD hh:mm 
 x: X coordinate Degrees longitude
 y: Y coordinate Degrees latitude 
@@ -589,13 +599,6 @@ v10: ‘v’ (south to north) component of wind at 10m elevation2 m/s
 
 The locations are unprojected in WGS84 (EPSG:4326), while the wind estimates are bilinearly interpolated from ECMWF’s ERA5 reanalysis: Hersbach, H., Bell, B., Berrisford, P., Hirahara, S., Hora_nyi, A., Mun~oz-Sabater, J., Nicolas, J., Peubey, C., Radu, R., Schepers, D., Simmons, A., Soci, C., Abdalla, S., Abellan, X., Balsamo, G., Bechtold, P., Biavati, G., Bidlot, J., Bonavita, M., Chiara, G. & et al. (2020). The ERA5 global reanalysis. Quarterly Journal of the Royal Meteorological Society, 146(730), 1999-2049. http://dx.doi.org/10.1002/qj.3803
 
-```{r import_pb_data, attr.source = ".numberLines"}
-pb <- read.csv("data/WH_X33406_location_data-1.csv")
-```
-
-```{r}
-head(pb)
-```
 
 # Extra: handling irregular data {#sec-narwhal-reg}
 
@@ -725,7 +728,7 @@ data_split <- split_at_gap(data = tracks_gps_O,
 
 An alternative to this approach is to fill large gaps with NAs, but this can be problematic if there is any covariate-dependence on the transition probabilities. You can find some code further below, that handles missing data by setting the gaps to NAs, using the package `adehabitatLT`.
 
-## Interpolation (correlated random walk)
+## Interpolation (correlated random walk) {#sec-ctcrw}
 
 Once the track is split, there is often still irregularity within each segments, and we want to interpolate or predict new locations to form a regular grid of observations. 
 
