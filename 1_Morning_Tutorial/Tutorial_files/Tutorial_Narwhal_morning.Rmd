@@ -207,10 +207,12 @@ The gamma distribution is strictly positive (i.e., it does not allow for $0$s). 
 Here, we will start simple and we will not use covariates. 
 
 4. We need to select initial values for the parameters to estimate. The HMMs are fit using maximum likelihood estimate (MLE) with a numerical optimizer. An unfortunate aspect of fitting models using numerical optimizers, is that, to be able to explore the parameter space and find the best parameter values for the model, the optimizer needs to start somewhere. 
-You need to decide where it starts. Unfortunately, choosing bad starting values can result in parameter estimates that are not the MLE, but just a local maximum. To choose your initial parameter you can take a quick peak at the data (e.g., using the plots below) and use some general biological information. For example, it’s common for animals to have one behaviour with long step lengths and small turning angles and one behaviour with short step lengths and larger turning angles. From the plots below (note that we can simply use plot on our data), it looks like the animal has step lengths that are close to $0.1$ and $0.6$ km. There could be a third behaviour with larger step lengths. But for now we will consider only two.
+You need to decide where it starts. Unfortunately, choosing bad starting values can result in parameter estimates that are not the MLE, but just a local maximum. To choose your initial parameter you can take a quick peak at the data (e.g., using the plots below) and use some general biological information. For example, it’s common for animals to have one behaviour with long step lengths and small turning angles and one behaviour with short step lengths and larger turning angles. 
+From the plots below, it looks like the animal has many step lengths that are close to $0.1$ and $0.6$ km. There could be a third behaviour with larger step lengths. But for now we will consider only two.
 
 Note, by default, `fitHMM` will set the argument `estAngleMean` to NULL, which means that we assume that the mean angle is $0$ for both behaviours (i.e., the animal has a tendency to continue in the same direction) and that only the angle concentration parameters differ. 
-The concentration parameters control the extent to which the animal continues forward versus turn. Doing so reduces the number of parameters to estimate. These are all very important decisions that you must make when you construct your model.
+The concentration parameters control the extent to which the animal continues forward versus turn. Doing so reduces the number of parameters to estimate. 
+These are all very important decisions that you must make when you construct your model.
 It's useful to visualise your data in order to choose initial parameters.
 
 ```{r inits, warning=FALSE, attr.source = ".numberLines", fig.width = 10, fig.height = 4}
@@ -232,8 +234,8 @@ abline(h = 0.6, col = rgb(1, 0, 0, 0.5))
 
 Based on visual examination of the data, we might choose our initial parameters to be $0.1$ and $0.6$ for the mean step lengths and use half those values for the standard deviations. 
 The turning angles are either very close to $0$ or pretty spread from $-\pi/2$ to $\pi/2$. High concentration parameter values ($\kappa$, said kappa) mean that the animal has a tendency to move in the same direction. 
-Values close to 0 mean that the turning angle distribution is almost uniform (the animal turns in all directions). Note that $\kappa$
-cannot be exactly 0, so let’s choose 0.1 and 1.
+Values close to 0 mean that the turning angle distribution is almost uniform (the animal turns in all directions). 
+Note that $\kappa$ cannot be exactly 0, so let’s choose 0.1 and 1.
 
 ```{r inits3, message=FALSE, attr.source = ".numberLines", cache=TRUE}
 # define states (optional)
@@ -266,8 +268,10 @@ mod <- fitHMM(data,
 mod
 ```
 
-We can also use the `plot` function to plot the outputs. The most interesting output is usually the state-dependent distributions (i.e., the estimated distributions of step lengths and turning angles in each state). 
-Note that setting `plotTracks = TRUE` will plot maps of each track segment, colored based on the estimated state.
+We can also use the `plot` function to plot the outputs. 
+The most interesting output is usually the state-dependent distributions (i.e., the estimated distributions of step lengths and turning angles in each state). 
+Note that setting `plotTracks = TRUE` will plot maps of each track segment, colored based on the estimated state. 
+We will set it to `FALSE` and show a more integrative way to plot these below.
 
 ```{r plotHMM, message=FALSE, attr.source = ".numberLines", cache=TRUE}
 # plot state-dependent distributions
@@ -278,7 +282,7 @@ Based on the mean step length parameters, it looks like the first behavioural st
 This is particularly easy to see in the step histogram (first figure), where the estimated distribution for each state is overlaid on top of the observed step length frequencies. 
 The turning angle distributions of second state (travel) indicates much more directed movement, with higher angular concentration.
 
-## Identifying Behavioural States
+## Identifying behavioural states
 
 We are interested in identifying when an animal is in each of the behavioural states (i.e., when the animal is in state 1 vs state 2), something we call state decoding. 
 We can use the function `viterbi`, which uses the Viterbi algorithm to produce the most likely sequence of states according to your fit model and data.
@@ -295,6 +299,8 @@ head(dec_states, 20)
 # How many locations in each state do we have?
 table(dec_states)
 ```
+
+This kind of information (number of locations in each states), can be used to get a behavioural budget for example. Here looking like that spend 50% of their time in each behavioural state.
 
 In many cases, it is more interesting to get the probability of being in each state rather than the most likely state. To do so, you can use the function `stateProbs`, which returns a matrix of the probability of being in each state for each time step (this is known as local decoding).
 
@@ -316,21 +322,19 @@ data$state_p1 <- statep[,1]
 
 # Plot tracks, coloured by viterbi states
 ggplot(data, aes(x, y, col = viterbi_state, group = ID)) +
-    geom_point(size = 0.5) + geom_path() +
-    coord_equal() +
+  geom_point(size = 0.5) + geom_path() +
   scale_color_manual(values = c("#E69F00", "#56B4E9"))
 
 # Plot tracks, coloured by state probabilities
 ggplot(data, aes(x, y, group = ID, col = state_p1)) +
   geom_point(size = 0.5) + geom_path() + 
-  coord_equal() +
   scale_color_continuous(high = "#E69F00", low = "#56B4E9")
 
 ```
 
 You can see that there is general agreement with the global (Viterbi) and local decoding, indicating that there is generally a high state probabilty and we have high confidence in our state classification.
 
-## Checking the Stability of the Parameter Estimates
+## Checking the stability of the parameter estimates
 
 The first thing we need to look into is whether the parameter estimates are reliable (i.e., if we are finding the global maximum). 
 As mentioned above, the initial parameter values can affect the estimating procedures. So it’s always good to check if you get similar results with different starting values. Here, we will make the starting values of the two behavioural states closer to one another.
