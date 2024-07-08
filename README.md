@@ -8,16 +8,16 @@ The goal of the workshop is to illustrate how hidden Markov models (HMMs) can be
 
 ## Tentitative schedule
 
-* 10:00 Introduction to HMM (presentation)
-* 10:30 Start of animal movement tutorial
-* 11:30 Break
-* 12:00 End of animal movement tutorial
-* 13:00 Lunch
-* 14:00 Research talk: Brett McClintock - HMMs in ecology
-* 15:00 Start of accelerometer tutorial
-* 15:30 Break
-* 16:00 End of accelerometer tutorial
-* 16:45 Wrap up
+* 10:00: Introduction to HMM (presentation)
+* 10:30: Start of animal movement tutorial
+* 11:30: Break
+* 12:00: End of animal movement tutorial
+* 13:00: Lunch
+* 14:00: Research talk: Brett McClintock - HMMs in ecology
+* 15:00: Start of accelerometer tutorial
+* 15:30: Break
+* 16:00: End of accelerometer tutorial
+* 16:45: Wrap up
 
 ## Prerequisite experience
 
@@ -34,20 +34,20 @@ The goal of the workshop is to illustrate how hidden Markov models (HMMs) can be
 
 ## Morning tutorial 
 
-The tutorial will be completed together, and can be found in the [activity](./Morning_Tutorial/Activity/Tutorial_Narwhal_morning_activity.Rmd) folder and will begin with a 30-minute introduction that will provide an overview of the tutorial objectives, and will go through the statistical background required. The tutorial has some guided activities.
+The tutorial will be completed together, and can be found in the [activity](./Morning_Tutorial/Activity/Tutorial_Narwhal_morning_activity.Rmd) folder and will begin with a 20-minute introduction that will provide an overview of the tutorial objectives, and will go through the statistical background required. The tutorial has a guided exercise.
 
 ### Morning tutorial learning objectives
 
-- Understand the statistical framework for HMMs and their application to animal movement data
-- Select appropriate temporal resolution for HMM analysis
-- Interpolate missing locations (linear, crw, path segmentation, and multiple imputation)
-- Fit HMMs to animal movement data to identify behaviours
-- Incorporate covariates on state transition probability to identify conditions that promote different behaviours
+1. Fit simple HMMs using momentuHMM
+2. Checking model fit 
+3. Incorporating and interpreting covariates on behaviour transition probabilities
+4. Incorporating covariates in the observation model
+
 
 ### Morning tutorial instructions
 
-- Work through the activity file [activity](./Morning_Tutorial/Activity/Tutorial_Narwhal_morning_activity.Rmd)
-- Follow the slides by opening [slides](./Morning_Tutorial/presentation_slides.pdf)
+- Work through the tutorial file [activity](./Morning_Tutorial/Activity/Tutorial_Narwhal_morning_activity.Rmd)
+- Follow the slides by opening [slides](./Morning_Tutorial/Morning_Slides.pdf)
 - If you get lost, you can follow along with the completed tutorial [html](./Morning_Tutorial/Narwhal/Tutorial_Narwhal_morning.html) file.
 
 ## Afternoon Tutorial
