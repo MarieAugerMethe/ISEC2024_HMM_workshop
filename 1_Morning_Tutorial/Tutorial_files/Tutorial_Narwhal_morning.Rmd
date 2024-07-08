@@ -152,7 +152,7 @@ These represent the split tracks we created every time we had a data gap longer 
 # Create data streams and process covariates
 
 Next, we need to derive our data streams (step lengths and turning angles) and covariates. 
-The first covariate we will explore will be time of day, so we will derive this covariate now.
+One covariate we will explore will be time of day, so we will derive this covariate now.
 
 ```{r prep, attr.source = ".numberLines"}
 # calculate time of day variable (for later use)
@@ -510,8 +510,8 @@ Here it looks like the "resident" behaviour is less common than the "travelling"
 
 ## Covariates in the observation model
 
-This section will illustrate how to model mean step length as a function of a different covariate: time of day. 
-Any parameter in the observation model (e.g., mean or sd of the step lengths, or turning angle parameters) can be modelled as a function of a covariate,  which allows for the movement behaviour within each discrete state to vary. 
+This section will illustrate how to model mean step length as a function of a  covariate. 
+Any parameter in the observation model (e.g., mean or sd of the step lengths, or turning angle parameters) can be modelled as a function of a covariate, which allows for the movement behaviour within each discrete state to vary. 
 
 Here, we will model mean step length based on the time of day.
 Since time of day is a cyclic covariate, we must define a relationship that ensures that the mean step length are similar at the very end and very beginning of the day. 
@@ -524,7 +524,6 @@ where 24 refers for the 24 hour period of interest. This relationhip can conveni
 # set new formula
 formula_tod <- ~cosinor(tod, period = 24)
 ```
-
 
 To do link the formula to the mean step length, we specify `DM`, which will be a list of formulas for the step length (and possibly other) parameters. 
 For simplicity, we will only model the mean, but we could also model the standard deviation with the same relationship. 
@@ -558,9 +557,9 @@ The regression coefficients are difficult to interpret for a cyclic function, bu
 plot(mod_obs, ask = FALSE, plotCI = TRUE, plotTracks = FALSE)
 ```
 
-This shows that the mean step within each state varies based on time of day, with higher step lengths in the morning. State 1 has a mean ranging from roughly 280-300m and state 2 ranges from roughly 600-900m. 
+This shows that the mean step within each state varies based on time of day, with higher step lengths in the morning. State 1 has a mean ranging from roughly 280-300 m (0.28-0.30 km) and state 2 ranges from roughly 600-900m (0.6-0.9 km). 
 
-As the observation data is the same between these models and the models above, we can use AIC to compare models with and without time of day effects.
+As the observation data (i.e., the data stream: step lengths and turning angles) are the same between these models and the models above, we can use AIC to compare models with and without time of day effects.
 
 ```{r AIC_htides_HMMs, attr.source = ".numberLines", collapse=TRUE}
 AIC(mod)  # without time of day
@@ -569,6 +568,8 @@ AIC(mod_obs)  # time of day effect on observation parameters
 ```
 
 This indicates the the model with a time-varying mean step length is the best fitting model. 
+
+For all of these new models, we have not check the starting values nor their fit as tutorial time is limited. However, these checks should be done for all models fitted, and special care should be made to check the final selected model.
 
 # Exercise
 
