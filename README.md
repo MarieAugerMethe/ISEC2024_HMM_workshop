@@ -2,22 +2,22 @@
 
 ## Description and format
 
-This workshop was developed by Fanny Dupont,Vianey Leos Barajas, and Marie Auger-Méthé, with special guest speaker Brett McClintock, for the 2024 ISEC in Swansea. The tutorial materials is based on previous tutorials given by member of the teams as well as past contributors: Natasha Klappstein, Arturo Esquivel, Marco Gallegos Herrada, Vinky Wang, Eric Ste-Marie, and Ron Togunov.
+This workshop was developed by Fanny Dupont, Vianey Leos Barajas, and Marie Auger-Méthé, with special guest speaker Brett McClintock, for the 2024 ISEC in Swansea. The tutorial materials is based on previous tutorials given by member of the teams as well as past contributors: Natasha Klappstein, Arturo Esquivel, Marco Gallegos Herrada, Vinky Wang, Eric Ste-Marie, and Ron Togunov.
 
 The goal of the workshop is to illustrate how hidden Markov models (HMMs) can be used to classify behaviours and identify behaviour-specific habitat associations using a range of movement and biologging data. It is divided in two parts: morning and afternoon.
 
 ## Tentitative schedule
 
-10:00 Introduction to HMM (presentation)
-10:30 Start of animal movement tutorial
-11:30 Break
-12:00 End of animal movement tutorial
-13:00 Lunch
-14:00 Research talk: Brett McClintock - HMMs in ecology
-15:00 Start of accelerometer tutorial
-15:30 Break
-16:00 End of accelerometer tutorial
-16:45 Wrap up
+* 10:00 Introduction to HMM (presentation)
+* 10:30 Start of animal movement tutorial
+* 11:30 Break
+* 12:00 End of animal movement tutorial
+* 13:00 Lunch
+* 14:00 Research talk: Brett McClintock - HMMs in ecology
+* 15:00 Start of accelerometer tutorial
+* 15:30 Break
+* 16:00 End of accelerometer tutorial
+* 16:45 Wrap up
 
 ## Prerequisite experience
 
