@@ -24,7 +24,7 @@ pre.numberSource code
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-# Tutorial goals and set up
+# Tutorial goals
 
 The goal of this tutorial is to explore how to fit hidden Markov models
 (HMMs) to movement data. To do so, we will use the R package `momentuHMM`, 
@@ -47,7 +47,7 @@ The primary learning objectives in this first tutorial are to:
 4. Incorporating and interpreting covariates on behaviour transition probabilities
 5. Incorporating covariates in the observation model
 
-## Setup
+# Setup
 
 First, let's load the packages that we will need to complete the analyses. 
 Of course you need to have them installed first.
@@ -80,7 +80,7 @@ We will need the functions in the following file `utility_functions.R`
 source("utility_functions.R")
 ```
 
-# Import data with description and processing
+# Import data (with description and simple processing)
 
 HMMs assume that locations are taken at regular time steps and that there is negligible position error. 
 For example, HMMs are adequate to use on data collected from tags that take
@@ -135,7 +135,7 @@ To get a reference of where these narwhals are swimming, let's also import a lan
 land <- st_read("data/NorthBaffin.shp")
 ```
 
-Let's plot the narwhal movement data over the bathymetry
+Let's plot the narwhal movement data over the bathymetry and land layers.
 
 ```{r plot_gps_data, warning=FALSE, attr.source = ".numberLines"}
 ggplot() +
@@ -146,52 +146,27 @@ ggplot() +
 
 ```
 
-We will plot the tracks with the package `ggOceanMaps` that will show the tracks on the map of the Earth, with limits set in Longitude and Latitude of our data (`bbox`below). This package is convenient since it deals with Longitude and Latitude, and there is no need to transform our dataset into an `sf` object. In the `crs` argument, we define the coordinate reference system of the original data (in this case WGS84, which is defined by the EPSG code `4326`).
-
-```{r plot_gps_data, warning=FALSE, attr.source = ".numberLines"}
-# Define the geographical limits (box) of the background map: c(min_lon,max_lon,min_lat,max_lat)
-bbox <-c(min(tracks_gps$x), max(tracks_gps$x),
-         min(tracks_gps$y), max(tracks_gps$y))
-
-#Plot the data, with background map
-basemap(limits = c(bbox), bathymetry = TRUE) + 
-  geom_spatial_path(data = tracks_gps, 
-                    aes(x = x, y = y, colour=factor(ID)), crs = 4326) +
-  ggtitle("Movement data of the narwhals")
-```
-
 We can see that even though its the data for only 3 narwhals, that there are more than 3 tracks. 
 These represent the split tracks we created every time we had a data gap longer than 1 hr.
 
-# Covariates and data streams
+# Create data streams and process covariates
 
 Next, we need to derive our data streams (step lengths and turning angles) and covariates. 
-Later in our tutorial, our first covariate we will be time of day, so we will derive this covariate now.
+The first covariate we will explore will be time of day, so we will derive this covariate now.
 
 ```{r prep, attr.source = ".numberLines"}
 # calculate time of day variable (for later use)
 tracks_gps$tod <- hour(tracks_gps$time) + minute(tracks_gps$time) / 60
 ```
 
-Another covariate we will explore is bathymetry. Let's import the raster. 
-
-Let's plot it.
-
-```{r}
-ggplot() +
-  geom_spatraster(data=rast(bathy)) +
-  geom_spatial_path(data = tracks_gps, 
-                    aes(x = x, y = y, colour=factor(ID)), crs = 4326) 
-```
-
 Now, we will get our observation variables using the `prepData` function. 
 
-The default is UTM, but here we use Lat Lon, so we specify "LL" in `type`. 
+The default is UTM, but here the narwhal location data is in Latitude and Longitude, so we specify "LL" in `type`. 
 
 The argument `covNames` will distinguish our model covariates from data streams. 
 If there are missing covariate values, the default is to fill the missing value with the nearest value. This can be reasonable for spatial covariates, but wouldn't be sensible for a covariate such as time of day. We have no missing covariate values, so it's not a concern, but this is something to be aware of when using `prepData`. 
 
-Importantly, we will extract the bathymetry values at the location using the argument `spatialCovs`.
+As mentioned above, we will also explore using bathymetry as a covariate. Thus, we will extract the bathymetry values at the location using the argument `spatialCovs`.
 
 ```{r prep2, attr.source = ".numberLines"}
 # calculate step length and turning angles
@@ -201,10 +176,11 @@ data <- prepData(tracks_gps, type = "LL", covNames = "tod", spatialCovs = list(b
 head(data)
 ```
 
-
-It is now possible to now to fit an HMM on this dataset and next we will explore this in the R package `momentuHMM`.
+We can see that `prepData` has calculated the step length and the turning angle, and has extracted the bathymetry value at each location.  
 
 # Fit HMM to data 
+
+It is now possible to now to fit an HMM on this dataset and next we will explore this in the R package `momentuHMM`.
 
 The primary learning objectives of this part are:
 
@@ -621,18 +597,16 @@ tracks_gps_O <- tracks_gps_O %>%
          !(time == lag(time) & x == lag(x) & y == lag(y) & loc_class == lag(loc_class)))
 ```
 
-Now we will plot the tracks with a new package `ggOceanMaps` that will show the tracks on the map of the Earth, with limits set in Longitude and Latitude of our data (`bbox`below). This package is convenient since it deals with Longitude and Latitude, and there is no need to transform our dataset into an `sf` object. In the `crs` argument, we define the coordinate reference system of the original data (in this case WGS84, which is defined by the EPSG code `4326`).
+Let's plot the data over the bathymetry and land layers we have imported at the beginning of the tutorial.
+
 
 ```{r plot_gps_O_data, warning=FALSE, attr.source = ".numberLines"}
-# Define the geographical limits (box) of the background map: c(min_lon,max_lon,min_lat,max_lat)
-bbox <-c(min(tracks_gps_O$x), max(tracks_gps_O$x), 
-         min(tracks_gps_O$y), max(tracks_gps_O$y))
-
-# Plot the data, with background map
-basemap(limits = c(bbox), bathymetry = TRUE) + 
+ggplot() +
+  geom_spatraster(data=rast(bathy)) +
+  geom_sf(data=land, fill="beige") +
   geom_spatial_path(data = tracks_gps_O, 
-                    aes(x = x, y = y,colour=factor(ID)), crs = 4326)+
-  ggtitle("Movement data of the narwhals")
+                    aes(x = x, y = y, colour=factor(ID)), crs = 4326) 
+
 ```
 
 
