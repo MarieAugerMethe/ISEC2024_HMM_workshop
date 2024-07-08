@@ -590,10 +590,25 @@ head(pb)
 ```
 
 The column time is the date and time at which the GPS location was obtained by telemetry collar, while coordinates are in degrees longitude and latitude (Unprojected locations in WGS84 (EPSG:4326). 
+Do the following questions.
 
-Fit a simple two-state HMMs.
+## Q1. Fit a simple two-state HMMs.
 
-The answers are found in section below. But only peak if you are stuck.
+## Q2. Look at the state-dependent distribution and describe the movement characteristics associated with each behavioural states.
+
+## Q3. Identify what proportion of time is spent in each behaviour.
+
+## Q4. Plot the track with the decoded behavioural state
+
+## Q5. Look at the pseudo residuals of the model. Do they indicate any issues with the model? 
+
+## Q6. Assess whether including time of day as a covariate in the transition probabilities improve the model fit. Interpret the results.
+
+## Q7. Check if using time of day changes the pseudo-residuals.
+
+## Q8. What modification(s) could be done to improve the model?
+
+The answers are found in section \@ref(sec-res-pb) below. But only peak if you are stuck, instead look at the narwhal code.
 
 # Extra: handling irregular data {#sec-narwhal-reg}
 
@@ -835,9 +850,9 @@ mute <- mapply(function(data, col) {
 
 Notice how in some areas the different simulations have generally good agreement in the likely location during gaps, while in others they diverge. Multiple imputation can be particularly powerful if we want to incorporate environmental variables, as spatially explicit variables can be extracted for each simulated track to sample the most likely conditions encountered by the animal.
 
-# Code for polar bear data exercise
+# Code for polar bear data exercise {#sec-res-pb}
 
-Q1. Fit a simple two-state HMMs.
+## Q1. Fit a simple two-state HMMs.
 
 Before we can do anything, we need to prepare the data. Here for a simple HMM without any covariate, we would only need to do the following.
 
@@ -856,7 +871,7 @@ hist(pb_data$angle, breaks=50,
      main = "", xlab = "turning angle")
 ```
 
-There is plenty of presistence in turning angle (very high peak at 0) and though hard to exactly pick out there are maybe two different peaks in step length, somthing around 0.2 and 1.7.
+There is plenty of persistence in turning angle (very high peak at 0) and though hard to exactly pick out there are maybe two different peaks in step length, somthing around 0.2 and 1.7.
 
 
 ```{r vis_pb_2, attr.source = ".numberLines"}
@@ -892,4 +907,146 @@ mod_pb_2state <- fitHMM(pb_data,
                         retryFits = 10)
 ```
 
-Q2. 
+## Q2. Look at the state-dependent distribution and describe the movement characteristics associated with each behavioural states.
+
+```{r plot_emission_pb, attr.source = ".numberLines"}
+plot(mod_pb_2state, ask = FALSE, plotTracks = FALSE)
+```
+
+State 1 is far more directed than state 2. The step length distribution attribute a clear peak for state 1 for small steps, while state 2 allow for a wide variation in step length.
+
+## Q3. Identify what proportion of time is spent in each behaviour.
+
+To do this, we need to first apply the Viterbi algorithm to get the most likely state sequencess.
+
+```{r viterbi_pb, attr.source = ".numberLines"}
+dec_state_pb <- viterbi(mod_pb_2state)
+head(dec_state_pb)
+```
+
+Let's count how many in each state, and divided by the length of the time series.
+
+```{r beh_budget_pb, attr.source = ".numberLines"}
+table(dec_state_pb)/length(dec_state_pb)
+```
+
+They spend more time in state 2 than in state 1.
+
+## Q4. Plot the track with the decoded  behavioural state
+
+## Q5. Look at the pseudo residuals of the model. Do they indicate any issues with the model? 
+
+```{r pseudo_pb, attr.source = ".numberLines"}
+plotPR(mod_pb_2state)
+```
+
+We see that there is unexplained autocorrelation in the step length. It's worth looking at a model with more behavioural states of with additional covariates that may explain some of this correlation.
+
+## Q6. Assess whether including time of day as a covariate in the transition probabilities improve the model fit. Interpret the results.
+
+To be able to use time of day in the model, we will need to prepare the data again.
+
+```{r prepData_pb_tod, attr.source = ".numberLines"}
+pb$tod <- hour(pb$time) + minute(pb$time) /60
+pb_data <- prepData(pb, type = "LL", covNames = "tod")
+head(pb_data)
+```
+
+Now let's create the formula for time of day. 
+
+```{r formula_tod_pb, attr.source = ".numberLines"}
+formula_tod <- ~cosinor(tod, period = 24)
+```
+
+While this is the same formula as the one used for the narwhals, we will use it in the transition probability here, not as a covariate in the emission distributions.
+
+We need to get the starting values. To be able to do so, we will need to refit the base model with the new data.
+
+```{r par0_tod_pb, attr.source = ".numberLines"}
+mod_pb_2state_new <- fitHMM(pb_data, 
+                        nbState = nbState_pb,
+                        dist = dist_pb,
+                        Par0 = par0_pb)
+par0_pb_tod <- getPar0(model = mod_pb_2state_new, 
+                       formula = formula_tod)
+```
+
+Now let's fit the model where the transition probabilities are a function of time of day to change.
+
+```{r pb_tod_mod, attr.source = ".numberLines"}
+mod_tpm_pb <- fitHMM(pb_data,
+                  nbStates = nbState_pb,
+                  dist = dist_pb,
+                  Par0 = par0_pb_tod$Par,
+                  beta0 = par0_pb_tod$beta,
+                  formula = formula_tod)
+```
+
+Let's plot the stationary state probabilities.
+
+```{r, attr.source = ".numberLines"}
+plotStationary(mod_tpm_pb, plotCI = TRUE)
+```
+
+It looks like state 2 is more common early in the day than state 1.
+
+Is it better than the simple 2-states model?
+
+```{r, attr.source = ".numberLines"}
+AIC(mod_pb_2state)
+AIC(mod_tpm_pb)
+```
+
+Yes, it looks better.
+
+## Q7. Check if using time of day changes the pseudo-residuals.
+
+```{r, attr.source = ".numberLines"}
+plotPR(mod_tpm_pb)
+```
+
+There is still unexplained autocorrelation in the step length distribution. 
+
+## Q8. What modification(s) could be done to improve the model?
+
+Many modifications could be done! One example, could be to look at adding another state. 
+
+Here is the code to fit a 3-state HMMs with and without time of day as a covariate for the transition probabilities. We condensed the code a bit more here. Note that we assume that the 3 state is an intermediate state between states 1 and 2.
+
+
+```{r, attr.source = ".numberLines"}
+# Model without tod
+mod_pb_3state <- fitHMM(pb_data, 
+                        nbState = 3,
+                        dist = dist_pb,
+                        Par0 = list(step = c(c(0.2, 1, 1.8), # mean
+                                    c(0.1, 0.5, 0.9)), # sd
+                                    angle = c(0.1, 1.0, 2.0))) # kappa
+# Model with tod
+par0_pb_tod_3 <- getPar0(model = mod_pb_3state, 
+                       formula = formula_tod)
+mod_tpm_pb_3state <- fitHMM(pb_data,
+                  nbStates = 3,
+                  dist = dist_pb,
+                  Par0 = par0_pb_tod_3$Par,
+                  beta0 = par0_pb_tod_3$beta,
+                  formula = formula_tod)
+```
+
+Let's look at AIC.
+
+```{r, attr.source = ".numberLines"}
+AIC(mod_tpm_pb_3state, mod_pb_3state)
+```
+
+Note that AIC cannot be used to select the number of states. But if we compare the two models with 3 states, we see that the model with the time of day in transition probability matrix is better.
+
+Let's look at the pseudo residuals.
+
+```{r, attr.source = ".numberLines"}
+plotPR(mod_tpm_pb_3state)
+```
+
+The pseudo residuals look better (e.g., QQ plots) and the unexplained autocorrelation in steps is reduced but still problematic. 
+
+See Togunov et al. for a more complex HMM that fits the data better.
