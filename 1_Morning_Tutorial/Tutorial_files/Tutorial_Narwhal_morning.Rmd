@@ -89,14 +89,14 @@ reprocessing, simple HMMs are not suitable for irregular times series
 of locations or locations with large measurement error (e.g., you would
 need to preprocess Argos data before applying the type of HMMs presented in this tutorial).
 
-The dataset we will work with includes the movement tracks of three narwhals tagged with Fastlock GPS tags. 
+The dataset we will work with includes the movement tracks of three narwhals tagged with Fastloc-GPS tags. 
 The dataset was provided by Dr. Marianne Marcoux (Fisheries and Oceans, Canada). 
-For simplicity, we only examine the GPS data from two weeks in August 2017. 
+For simplicity, we only examine the fastloc-GPS data from two weeks in August 2017. 
 
 As is the case for the data of many aquatic species,
-the raw narwhal Fastlock GPS data is collected at irregular time intervals (the time of locations is dictated partly with when they surface). 
+the raw narwhal Fastloc-GPS data is collected at irregular time intervals (the time of locations is dictated partly with when they surface). 
 To simplify the tutorial, we have already regularized the tracks. 
-Specifically, we have split tracks with data gaps of more 1 hr into a subset of tracks, and have interpolating the locations at a 10 min interval using a continuous-time correlated random walk using the `momentuHMM` `crawlWrap` function. If interested in these pre-processing steps and decisions, wee section \@ref(sec-narwhal-reg) below.
+Specifically, we have split tracks with data gaps of more 1 hr into a subset of tracks, and have interpolating the locations at a 10 min interval using a continuous-time correlated random walk using the `momentuHMM` `crawlWrap` function. If interested in these pre-processing steps and decisions, see section \@ref(sec-narwhal-reg) below.
 
 Let's import the regularized narwhal movement data and convert the time column to an appropriate date format.
 
@@ -152,7 +152,7 @@ These represent the split tracks we created every time we had a data gap longer 
 # Create data streams and process covariates
 
 Next, we need to derive our data streams (step lengths and turning angles) and covariates. 
-One covariate we will explore will be time of day, so we will derive this covariate now.
+One covariate we will explore is time of day, so we will derive it now.
 
 ```{r prep, attr.source = ".numberLines"}
 # calculate time of day variable (for later use)
@@ -188,25 +188,25 @@ The primary learning objectives of this part are:
 2. Checking model fit
 3. Determining number of states to use
 
-## Fitting the Model
+## Fitting the model
 
 Our data is ready to use, and we are almost ready to fit the HMM (via the function `fitHMM`). 
 We now need to make many important modelling decisions and 
 most of these decisions will be associated with one of the arguments of the function. 
-The minimum arguments `fitHMM` requires are: `fitHMM(data, nbState, dist, Par0)`. 
+The minimum arguments `fitHMM` requires are: `fitHMM(data, nbStates, dist, Par0)`. 
 
 1. When we fit a HMM, we need to decide the number of behavioural states we are going to model. 
 To start simple, we will only use two behavioural states. These could be, for example, representing one behaviour with fast and directed movement (e.g., travelling) and one behaviour with a more slow and tortuous movement (e.g., residing). 
 This means that the argument `nbStates` will be set to $2$.
 
 2. We need to select the distribution we will use to model the step lengths and the one we will use to model the turning angles. 
-For now, we will use the gamma distribution for the step length and the von Mises for the turning angles. These are commonly used distributions, to model movement data. To specify these choices we will set the `argument` dist to: list(step="gamma", angle="vm"). Note that dist should be a list with an item for each data stream columns in the data that we are modelling (so here the column step and angle). 
+For now, we will use the gamma distribution for the step lengths and the von Mises for the turning angles. These are commonly used distributions, to model movement data. To specify these choices we will set the `argument` dist to: list(step="gamma", angle="vm"). Note that `dist` should be a list with an item for each data stream columns in the data that we are modelling (so here the column step and angle). 
 The gamma distribution is strictly positive (i.e., it does not allow for $0$s). If you have step lengths that are exactly zero in your data set, you need to use zero-inflated distributions. But in this case, we have no zeros.
 
 3. We need to decide whether we make the transition probabilities between the behavioural states dependent on covariates. 
 Here, we will start simple and we will not use covariates. 
 
-4. We need to select initial values for the parameters to estimate. The HMMs are fit using maximum likelihood estimate (MLE) with a numerical optimizer. An unfortunate aspect of fitting models using numerical optimizers, is that, to be able to explore the parameter space and find the best parameter values for the model, the optimizer needs to start somewhere. 
+4. We need to select initial values for the parameters to estimate. The HMMs are fit using maximum likelihood estimate (MLE) with a numerical optimizer. An unfortunate aspect of fitting models using numerical optimizers is that, to be able to explore the parameter space and find the best parameter values for the model, the optimizer needs to start somewhere. 
 You need to decide where it starts. Unfortunately, choosing bad starting values can result in parameter estimates that are not the MLE, but just a local maximum. To choose your initial parameter you can take a quick peak at the data (e.g., using the plots below) and use some general biological information. For example, it’s common for animals to have one behaviour with long step lengths and small turning angles and one behaviour with short step lengths and larger turning angles. 
 From the plots below, it looks like the animal has many step lengths that are close to $0.1$ and $0.6$ km. There could be a third behaviour with larger step lengths. But for now we will consider only two.
 
@@ -375,7 +375,7 @@ list(original = mod$mle$gamma, new = mod2$mle$gamma)
 
 Looks like they both returned very similar estimates for everything, though the negative log likelihood of the second set of starting values is slightly better. 
 
-The function `fitHMM` also has the argument `retryFits` which perturbs the parameter estimates and retries fitting the model. Since the optimization of HMMs depend on the starting values chosen, it is always good to explore multiple initial values and then choose the best estimates among them (which is done by `retryFits`). The argument is used to indicate the number of times you want perturb the parameters and retry fitting the model (you can choose the size of the perturbation by setting the argument `retrySD)`.
+The function `fitHMM` also has the argument `retryFits` which perturbs the parameter estimates and retries fitting the model. Since the optimization of HMMs depends on the starting values chosen, it is always good to explore multiple initial values and then choose the best estimates among them (which is done by `retryFits`). The argument is used to indicate the number of times you want to perturb the parameters and retry fitting the model (you can choose the size of the perturbation by setting the argument `retrySD)`.
 
 Let’s try (this will take a few minutes).
 
@@ -464,14 +464,14 @@ It's probably most common to include covariates on the transition probabilities 
 For example, prey density may increase the probability of switching into a foraging state or states may follow temporal patterns throughout the day.
 At time $t$, each transition probability is linked to covariates using a multinomial logit link
 	$$\gamma_{ij}^{(t)} = Pr(S_{t+1} = j \mid S_t = i) = \frac{\exp(\eta_{ij}^{(t)})}{\sum_{k=1}^{K}\exp(\eta_{ik}^{(t)})} $$
-	with the linear predictor for $P$ covariates $\{\omega_1^{(t)}, \omega_2^{(t)}, \dots \omega_P^{(t)}\}$ given as
+	with $K$ states and the linear predictor for $P$ covariates $\{\omega_1^{(t)}, \omega_2^{(t)}, \dots \omega_P^{(t)}\}$ given as
 $$\eta_{ij}^{(t)} = \begin{cases}
 	\beta^{(ij)}_0 + \sum_{p=1}^{P} \beta_p^{(ij)} \omega_p^{(t)} & \text{if } i \neq j \\
 	0 & \text{otherwise.}
 	\end{cases} $$
 For each transition probability, $\beta_0^{(ij)}$ is an intercept parameter, and $\beta_p^{(ij)}$ measures the effect of the $p$-th covariate $\omega_p$.
 
-Here, we will will create a model where transition probabilities vary as a function of the bathymetry (i.e., depth of the ocean). Thus $omega_1$ is the bathymetry value associated with that step and we can simply specify with a formula like the one used in simple linear models. 
+Here, we will will create a model where transition probabilities vary as a function of the bathymetry (i.e., depth of the ocean). Thus $\omega_1$ is the bathymetry value associated with that step and we can simply specify with a formula like the one used in simple linear models. 
 
 ```{r formula_bathy, cache = TRUE, attr.source = ".numberLines"}
 formula_bathy <- ~bathy
@@ -518,14 +518,14 @@ Since time of day is a cyclic covariate, we must define a relationship that ensu
 We can do this by specify the mean step length as a trigonometric (i.e., cyclic) function of time of day (defined as $\tau$),
 
 $$\mu_{i}^{(t)} = \alpha^{(i)}_0 + \alpha_1^{(i)} \cos \left(\frac{2 \pi \tau_t}{24}\right) +  \alpha_2^{(i)} \sin \left(\frac{2 \pi \tau_t}{24}\right) $$
-where 24 refers for the 24 hour period of interest. This relationhip can conveniently be specified with the `cosinor` function. 
+where 24 refers for the 24-hour period of interest. This relationhip can conveniently be specified with the `cosinor` function. 
 
 ```{r sformual_tod, message = FALSE, cache = TRUE, attr.source = ".numberLines"}
 # set new formula
 formula_tod <- ~cosinor(tod, period = 24)
 ```
 
-To do link the formula to the mean step length, we specify `DM`, which will be a list of formulas for the step length (and possibly other) parameters. 
+To link the formula to the mean step length, we specify `DM`, which will be a list of formulas for the step length (and possibly other) parameters. 
 For simplicity, we will only model the mean, but we could also model the standard deviation with the same relationship. 
 We can derive the initial parameters using the `getPar0` function, as described in the previous section.
 
@@ -567,14 +567,14 @@ AIC(mod_tpm)  # time of day effect on transition probabilities
 AIC(mod_obs)  # time of day effect on observation parameters
 ```
 
-This indicates the the model with a time-varying mean step length is the best fitting model. 
+This indicates that the model with a time-varying mean step length is the best fitting model. 
 
 For all of these new models, we have not check the starting values nor their fit as tutorial time is limited. However, these checks should be done for all models fitted, and special care should be made to check the final selected model.
 
 # Exercise
 
 Here we will use polar bear GPS data of one adult female from:
-Derocher, Andrew, 2021, "Replication Data for: Togunov RR, Derocher AE, Lunn NJ, Auger-Méthé M. 2021. Characterising menotatic behaviours in movement data using hidden Markov models. Methods in Ecology and Evolution.", https://doi.org/10.7939/DVN/QYMAYV,
+Derocher, Andrew, 2021, "Replication Data for: Togunov RR, Derocher AE, Lunn NJ, Auger-Méthé M. 2021. Characterising menotatic behaviours in movement data using hidden Markov models, Methods in Ecology and Evolution, https://doi.org/10.7939/DVN/QYMAYV.
 
 Here we only extracted the locations data from this dataset. It's the data from one female polar bear from April 5, 2011 to May 5, 2011. The collar collected GPS data every 30 min, and the 8 missing locations were imputted using a continuous-time correlated random walk as shown below for the narwhals (section \@ref(sec-ctcrw)). More information can be found in: Togunov RR, Derocher AE, Lunn NJ, Auger-Méthé M. 2021. Characterising menotatic behaviours in movement data using hidden Markov models. Methods in Ecology and Evolution 12: 1984-1998. 
 
@@ -592,7 +592,7 @@ head(pb)
 The column time is the date and time at which the GPS location was obtained by telemetry collar, while coordinates are in degrees longitude and latitude (Unprojected locations in WGS84 (EPSG:4326). 
 Do the following questions.
 
-**Q1. Fit a simple two-state HMMs.**
+**Q1. Fit a simple two-state HMM.**
 
 **Q2. Look at the state-dependent distribution and describe the movement characteristics associated with each behavioural states.**
 
@@ -871,7 +871,7 @@ hist(pb_data$angle, breaks=50,
      main = "", xlab = "turning angle")
 ```
 
-There is plenty of persistence in turning angle (very high peak at 0) and though hard to exactly pick out there are maybe two different peaks in step length, somthing around 0.2 and 1.7.
+There is plenty of persistence in turning angle (very high peak at 0) and though hard to exactly pick out there are maybe two different peaks in step length, somehing around 0.2 and 1.7.
 
 
 ```{r vis_pb_2, attr.source = ".numberLines"}
@@ -907,7 +907,7 @@ mod_pb_2state <- fitHMM(pb_data,
                         retryFits = 10)
 ```
 
-## Q2. Look at the state-dependent distribution and describe the movement characteristics associated with each behavioural states.
+## Q2. Look at the state-dependent distributions and describe the movement characteristics associated with each behavioural state.
 
 ```{r plot_emission_pb, attr.source = ".numberLines"}
 plot(mod_pb_2state, ask = FALSE, plotTracks = FALSE)

@@ -5,3 +5,8 @@
 
 # Ignore R studio files
 *.Rproj
+
+
+# Ignore mac files
+*.DS_Store
+*/*.DS_Store
