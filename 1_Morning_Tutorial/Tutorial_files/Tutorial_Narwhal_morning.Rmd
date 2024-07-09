@@ -940,7 +940,7 @@ pb_data$viterbi_state <- factor(dec_state_pb)
 
 # Plot tracks, coloured by viterbi states
 ggplot(pb_data, aes(x, y, col = viterbi_state)) +
-  geom_point(size = 0.5) + geom_path() +
+  geom_point(size = 0.5) + 
   scale_color_manual(values = c("#E69F00", "#56B4E9"))
 ```
 
@@ -994,7 +994,7 @@ mod_tpm_pb <- fitHMM(pb_data,
 
 Let's plot the stationary state probabilities.
 
-```{r, attr.source = ".numberLines"}
+```{r stat_pb, attr.source = ".numberLines"}
 plotStationary(mod_tpm_pb, plotCI = TRUE)
 ```
 
@@ -1002,16 +1002,15 @@ It looks like state 2 is more common early in the day than state 1.
 
 Is it better than the simple 2-states model?
 
-```{r, attr.source = ".numberLines"}
-AIC(mod_pb_2state)
-AIC(mod_tpm_pb)
+```{r AIC_pb_2, attr.source = ".numberLines"}
+AIC(mod_pb_2state, mod_tpm_pb)
 ```
 
 Yes, it looks better.
 
 ## Q7. Check if using time of day changes the pseudo-residuals.
 
-```{r, attr.source = ".numberLines"}
+```{r pr_2_pb, attr.source = ".numberLines"}
 plotPR(mod_tpm_pb)
 ```
 
@@ -1024,7 +1023,7 @@ Many modifications could be done! One example, could be to look at adding anothe
 Here is the code to fit a 3-state HMMs with and without time of day as a covariate for the transition probabilities. We condensed the code a bit more here. Note that we assume that the 3 state is an intermediate state between states 1 and 2.
 
 
-```{r, attr.source = ".numberLines"}
+```{r pb_3_states, attr.source = ".numberLines"}
 # Model without tod
 mod_pb_3state <- fitHMM(pb_data, 
                         nbState = 3,
@@ -1045,7 +1044,7 @@ mod_tpm_pb_3state <- fitHMM(pb_data,
 
 Let's look at AIC.
 
-```{r, attr.source = ".numberLines"}
+```{r AIC_3_pb, attr.source = ".numberLines"}
 AIC(mod_tpm_pb_3state, mod_pb_3state)
 ```
 
@@ -1053,10 +1052,12 @@ Note that AIC cannot be used to select the number of states. But if we compare t
 
 Let's look at the pseudo residuals.
 
-```{r, attr.source = ".numberLines"}
+```{r plot_pr_3_pb, attr.source = ".numberLines"}
 plotPR(mod_tpm_pb_3state)
 ```
 
 The pseudo residuals look better (e.g., QQ plots) and the unexplained autocorrelation in steps is reduced but still problematic. 
 
-See Togunov et al. for a more complex HMM that fits the data better.
+One of the things that is creating this autocorrelation is that when bears are sleeping or sitting on the ice for long periods of time, they slowly drift with the sea ice, which creates highly correlated movement (we can see the long stretches of state 1). See Togunov et al. (2021) for an HMM that accounts for sea ice drift and model the olfactory search strategy of polar bears. Togunov et al. (2021) is accompanied with a tutorial that use similar, albeit more complex, R code.
+
+Togunov RR, Derocher AE, Lunn NJ, Auger-Méthé M. 2021. Characterising menotatic behaviours in movement data using hidden Markov models. Methods in Ecology and Evolution 12: 1984-1998. 
