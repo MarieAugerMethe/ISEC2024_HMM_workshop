@@ -188,7 +188,7 @@ The primary learning objectives of this part are:
 2. Checking model fit
 3. Determining number of states to use
 
-## Fitting the Model
+## Fitting the model
 
 Our data is ready to use, and we are almost ready to fit the HMM (via the function `fitHMM`). 
 We now need to make many important modelling decisions and 
