@@ -592,7 +592,7 @@ head(pb)
 The column time is the date and time at which the GPS location was obtained by telemetry collar, while coordinates are in degrees longitude and latitude (Unprojected locations in WGS84 (EPSG:4326). 
 Do the following questions.
 
-**Q1. Fit a simple two-state HMMs.**
+**Q1. Fit a simple two-state HMM.**
 
 **Q2. Look at the state-dependent distribution and describe the movement characteristics associated with each behavioural states.**
 
@@ -907,7 +907,7 @@ mod_pb_2state <- fitHMM(pb_data,
                         retryFits = 10)
 ```
 
-## Q2. Look at the state-dependent distribution and describe the movement characteristics associated with each behavioural states.
+## Q2. Look at the state-dependent distributions and describe the movement characteristics associated with each behavioural state.
 
 ```{r plot_emission_pb, attr.source = ".numberLines"}
 plot(mod_pb_2state, ask = FALSE, plotTracks = FALSE)
