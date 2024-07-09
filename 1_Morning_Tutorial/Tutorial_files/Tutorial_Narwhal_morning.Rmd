@@ -940,7 +940,7 @@ pb_data$viterbi_state <- factor(dec_state_pb)
 
 # Plot tracks, coloured by viterbi states
 ggplot(pb_data, aes(x, y, col = viterbi_state)) +
-  geom_point(size = 0.5) + geom_path() +
+  geom_point(size = 0.5) + 
   scale_color_manual(values = c("#E69F00", "#56B4E9"))
 ```
 
