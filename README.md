@@ -60,6 +60,6 @@ The session will begin with a 20-minute introduction to accelerometer data then 
 ### Afternoon learning objectives 
 
 - Fit a basic HMM to accelerometer data using `momentuHMM`
-- Incorporate and interprete covariates on behaviour transition probabilities
+- Incorporate and interpret covariates on behaviour transition probabilities
 - Visualize the depth time series with decoded states
-- Use the Akaike Information Criteria for model selection
+- Understanding model selection
