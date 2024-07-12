@@ -27,7 +27,7 @@ The goal of the workshop is to illustrate how hidden Markov models (HMMs) can be
 
 ## Pre-workshop instructions
 
-- **Before the workshop, please read the instructions in one of the Installing instruction files (e.g., [0_Installing_packages](0_Installing_packages.Rmd)) files. Some of the packages can be tricky to install, so please install them before the workshop.**
+- **Before the workshop, please read the instructions in one of the Installing instruction files (e.g., [0_Installing_packages](./0_To_do_before_workshop/0_Installing_packages.Rmd)) files. Some of the packages can be tricky to install, so please install them before the workshop.**
 - Make sure all packages are up-to-date as older versions may not work
 - Download and unzip workshop zip file from Github (press on the green "< > Code" button on upper right corner)
 
