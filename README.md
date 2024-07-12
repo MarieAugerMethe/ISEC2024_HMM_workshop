@@ -34,11 +34,11 @@ The goal of the workshop is to illustrate how hidden Markov models (HMMs) can be
 
 ## Morning tutorial 
 
-The tutorial will be completed together, and can be found in the [activity](./Morning_Tutorial/Activity/Tutorial_Narwhal_morning_activity.Rmd) folder and will begin with a 20-minute introduction that will provide an overview of the tutorial objectives, and will go through the statistical background required. The tutorial has a guided exercise.
+The tutorial will be completed together, and can be found in the [Morning_Tutorial](./1_Morning_Tutorial/Tutorial_files) folder and will begin with a 20-minute introduction that will provide an overview of the tutorial objectives, and will go through the statistical background required. The tutorial has a guided exercise.
 
 ### Morning tutorial learning objectives
 
-1. Fit simple HMMs using `momentuHMM`
+1. Fit simple HMMs using `momentuHMM`
 2. Checking model fit 
 3. Incorporating and interpreting covariates on behaviour transition probabilities
 4. Incorporating covariates in the observation model
@@ -49,9 +49,9 @@ The tutorial will be completed together, and can be found in the [activity](./Mo
 
 ### Morning tutorial instructions
 
-- Work through the tutorial file [activity](./1_Morning_Tutorial/Tutorial_Slides/Tutorial_Narwhal_morning.Rmd)
+- Work through the tutorial file [activity](./1_Morning_Tutorial/Tutorial_Files/Tutorial_Narwhal_morning.Rmd)
 - Follow the slides by opening [slides](./1_Morning_Tutorial/Morning_Slides.pptx)
-- If you get lost, you can follow along with the compile version of the tutorial [html](./1_Morning_Tutorial/Tutorial_Slides/Tutorial_Narwhal_morning.html) file.
+- If you get lost, you can follow along with the compile version of the tutorial [html](./1_Morning_Tutorial/Tutorial_Files/Tutorial_Narwhal_morning.html) file.
 
 ## Afternoon Tutorial
 
