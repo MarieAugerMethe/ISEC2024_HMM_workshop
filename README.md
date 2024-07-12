@@ -2,9 +2,9 @@
 
 ## Description and format
 
-This workshop was developed by Fanny Dupont, Vianey Leos Barajas, and Marie Auger-Méthé, with special guest speaker Brett McClintock, for the 2024 ISEC in Swansea. The tutorial materials is based on previous tutorials given by member of the teams as well as past contributors: Natasha Klappstein, Arturo Esquivel, Marco Gallegos Herrada, Vinky Wang, Eric Ste-Marie, and Ron Togunov.
+This workshop was developed by Fanny Dupont, Vianey Leos Barajas, and Marie Auger-Méthé, with special guest speaker Brett McClintock, for the 2024 ISEC in Swansea. The tutorial materials are based on previous tutorials given by members of the teams as well as past contributors: Natasha Klappstein, Arturo Esquivel, Marco Gallegos Herrada, Vinky Wang, Eric Ste-Marie, and Ron Togunov.
 
-The goal of the workshop is to illustrate how hidden Markov models (HMMs) can be used to classify behaviours and identify behaviour-specific habitat associations using a range of movement and biologging data. It is divided in two parts: morning and afternoon.
+The goal of the workshop is to illustrate how hidden Markov models (HMMs) can be used to classify behaviours and identify behaviour-specific habitat associations using a range of movement and biologging data. It is divided into two parts: morning and afternoon.
 
 ## Tentitative schedule
 
@@ -13,7 +13,7 @@ The goal of the workshop is to illustrate how hidden Markov models (HMMs) can be
 * 11:30: Break
 * 12:00: End of animal movement tutorial
 * 13:00: Lunch
-* 14:00: Research talk: Brett McClintock - HMMs in ecology
+* 14:00: Research talk: Brett McClintock - Advanced HMM methods
 * 15:00: Start of accelerometer tutorial
 * 15:30: Break
 * 16:00: End of accelerometer tutorial
@@ -49,7 +49,7 @@ The tutorial will be completed together, and can be found in the [activity](./Mo
 
 ### Morning tutorial instructions
 
-- Work through the tutorial file [activity](./1_Morning_Tutorial/Activity/Tutorial_Narwhal_morning_activity.Rmd)
+- Work through the tutorial file [activity](./1_Morning_Tutorial/Activity/Tutorial_Narwhal_morning.Rmd)
 - Follow the slides by opening [slides](./1_Morning_Tutorial/Morning_Slides.pptx)
 - If you get lost, you can follow along with the completed tutorial [html](./1_Morning_Tutorial/Narwhal/Tutorial_Narwhal_morning.html) file.
 
