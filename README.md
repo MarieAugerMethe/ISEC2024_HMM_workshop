@@ -49,9 +49,9 @@ The tutorial will be completed together, and can be found in the [Morning_Tutori
 
 ### Morning tutorial instructions
 
-- Work through the tutorial file [activity](./1_Morning_Tutorial/Tutorial_Files/Tutorial_Narwhal_morning.Rmd)
+- Work through the tutorial file [activity](./1_Morning_Tutorial/Tutorial_files/Tutorial_Narwhal_morning.Rmd)
 - Follow the slides by opening [slides](./1_Morning_Tutorial/Morning_Slides.pptx)
-- If you get lost, you can follow along with the compile version of the tutorial [html](./1_Morning_Tutorial/Tutorial_Files/Tutorial_Narwhal_morning.html) file.
+- If you get lost, you can follow along with the compile version of the tutorial [html](./1_Morning_Tutorial/Tutorial_files/Tutorial_Narwhal_morning.html) file.
 
 ## Afternoon Tutorial
 
