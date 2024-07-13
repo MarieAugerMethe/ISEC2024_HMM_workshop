@@ -6,6 +6,9 @@
 # Ignore R studio files
 *.Rproj
 
+# Compile files morning
+/1_Morning_Tutorial/Tutorial_files/Tutorial_Narwhal_morning_cache/*
+/1_Morning_Tutorial/Tutorial_files/Tutorial_Narwhal_morning_files/*
 
 # Ignore mac files
 *.DS_Store
