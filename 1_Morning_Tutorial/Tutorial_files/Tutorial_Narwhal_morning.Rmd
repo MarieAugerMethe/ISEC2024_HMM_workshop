@@ -563,7 +563,7 @@ As the observation data (i.e., the data stream: step lengths and turning angles)
 
 ```{r AIC_htides_HMMs, attr.source = ".numberLines", collapse=TRUE}
 AIC(mod)  # without time of day
-AIC(mod_tpm)  # time of day effect on transition probabilities
+AIC(mod_tpm)  # bathymetry effect on transition probabilities
 AIC(mod_obs)  # time of day effect on observation parameters
 ```
 
