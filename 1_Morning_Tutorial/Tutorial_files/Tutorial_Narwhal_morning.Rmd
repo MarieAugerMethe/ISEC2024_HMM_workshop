@@ -332,7 +332,7 @@ ggplot(data, aes(x, y, group = ID, col = state_p1)) +
 
 ```
 
-You can see that there is general agreement with the global (Viterbi) and local decoding, indicating that there is generally a high state probabilty and we have high confidence in our state classification.
+You can see that there is general agreement with the global (Viterbi) and local decoding, indicating that there is generally a high state probability and we have high confidence in our state classification.
 
 ## Checking the stability of the parameter estimates
 
