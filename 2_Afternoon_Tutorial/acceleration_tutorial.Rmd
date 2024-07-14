@@ -70,7 +70,7 @@ library(lubridate)
 
 
 # Load data 
-BlacktipB <- read_delim("BlacktipB.txt", 
+BlacktipB <- read_delim("2_Afternoon_Tutorial/BlacktipB.txt", 
                         delim = "\t", escape_double = FALSE, 
                         trim_ws = TRUE)
 
