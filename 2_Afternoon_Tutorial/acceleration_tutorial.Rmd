@@ -155,7 +155,7 @@ fit1 = fitHMM(BlacktipBData,
 fit1
 ```
 
-Using the `plot` flunction, we can visualize the state-dependent distributions using the estimated parameters. The plot below provides a depiction of low-activity and high-activity behaviors. In this visualization, the low-activity distribution exhibits higher density closer to zero, while the high-activity behavior shifts its probability mass towards higher (scaled) 1-minute average ODBA values.
+Using the `plot` function, we can visualize the state-dependent distributions using the estimated parameters. The plot below provides a depiction of low-activity and high-activity behaviors. In this visualization, the low-activity distribution exhibits higher density closer to zero, while the high-activity behavior shifts its probability mass towards higher (scaled) 1-minute average ODBA values.
 
 ```{r}
 plot(fit1,breaks = 80)
